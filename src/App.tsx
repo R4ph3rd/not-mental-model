@@ -85,7 +85,7 @@ export default function App() {
   }, [])
 
   function handleEditRequest(id: string) {
-    setInspectorId(prev => prev === id ? null : id)
+    setInspectorId(id)
   }
 
   function handleExport() {

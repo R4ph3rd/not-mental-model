@@ -102,7 +102,10 @@ export function NodeCard({
           : 't-border t-card hover:border-white/20',
         !node.active && 'opacity-55',
       )}
-      onClick={e => onSelect(node.id, e.ctrlKey || e.metaKey)}
+      onClick={e => {
+        onSelect(node.id, e.ctrlKey || e.metaKey)
+        if (!e.ctrlKey && !e.metaKey) onEditRequest(node.id)
+      }}
     >
       {/* Inactive badge */}
       {!node.active && (
