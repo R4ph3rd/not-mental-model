@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { MentalModelNode, NodeCategory, ConfidenceLevel } from '@/types/mental-model'
+import type { MentalModelNode, NodeCategory, ConfidenceLevel, MemoryType } from '@/types/mental-model'
 
 const STORAGE_KEY = 'mental-model-nodes'
 
@@ -11,10 +11,34 @@ function now() {
   return new Date().toISOString()
 }
 
+// Migrate old nodes missing new fields
+function migrate(raw: Partial<MentalModelNode>): MentalModelNode {
+  return {
+    id: raw.id ?? generateId(),
+    category: raw.category ?? 'fact',
+    title: raw.title ?? '',
+    content: raw.content ?? '',
+    tags: raw.tags ?? [],
+    confidence: raw.confidence ?? 'medium',
+    source: raw.source,
+    createdAt: raw.createdAt ?? now(),
+    updatedAt: raw.updatedAt ?? now(),
+    linkedIds: raw.linkedIds ?? [],
+    active: raw.active ?? true,
+    pinned: raw.pinned ?? false,
+    memoryType: raw.memoryType ?? 'semantic',
+    scope: raw.scope ?? '',
+    importance: raw.importance ?? 0.8,
+    position: raw.position,
+  }
+}
+
 function load(): MentalModelNode[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : defaultNodes()
+    if (!raw) return defaultNodes()
+    const parsed = JSON.parse(raw) as Partial<MentalModelNode>[]
+    return parsed.map(migrate)
   } catch {
     return defaultNodes()
   }
@@ -31,61 +55,86 @@ function defaultNodes(): MentalModelNode[] {
       id: 'node-demo-1',
       category: 'project',
       title: 'Not Mental Model App',
-      content: 'Building a React interface for managing the AI\'s mental model of the user. Uses shadcn/ui, Tailwind, and Claude API.',
-      tags: ['react', 'typescript', 'claude'],
+      content: 'Building a React interface for managing the AI\'s mental model of the user. Uses shadcn/ui, Tailwind v4, and Claude API. Goal: transparent, user-controlled agent memory.',
+      tags: ['react', 'typescript', 'claude', 'hci'],
       confidence: 'high',
       source: 'conversation',
       createdAt: t,
       updatedAt: t,
-      linkedIds: ['node-demo-2'],
+      linkedIds: ['node-demo-5'],
+      active: true,
+      pinned: true,
+      memoryType: 'episodic',
+      scope: 'Work',
+      importance: 1.0,
     },
     {
       id: 'node-demo-2',
       category: 'preference',
-      title: 'Prefers dark UI',
-      content: 'User consistently prefers dark-themed interfaces with minimal clutter.',
-      tags: ['ui', 'design'],
+      title: 'Prefers dark, minimal UIs',
+      content: 'User consistently prefers dark-themed interfaces with minimal clutter and high information density. Dislikes verbose explanations in responses.',
+      tags: ['ui', 'design', 'style'],
       confidence: 'high',
       source: 'observed',
       createdAt: t,
       updatedAt: t,
       linkedIds: [],
+      active: true,
+      pinned: false,
+      memoryType: 'semantic',
+      scope: 'Personal',
+      importance: 0.85,
     },
     {
       id: 'node-demo-3',
       category: 'skill',
-      title: 'TypeScript & React',
-      content: 'Proficient in TypeScript and React. Comfortable with advanced patterns like custom hooks, context, and state management.',
+      title: 'TypeScript & React expert',
+      content: 'Proficient in TypeScript and React. Comfortable with advanced patterns: custom hooks, context, render optimization, and full-stack TypeScript (Vite, Next.js).',
       tags: ['typescript', 'react', 'frontend'],
       confidence: 'high',
       source: 'conversation',
       createdAt: t,
       updatedAt: t,
-      linkedIds: [],
+      linkedIds: ['node-demo-1'],
+      active: true,
+      pinned: false,
+      memoryType: 'semantic',
+      scope: 'Skills',
+      importance: 0.9,
     },
     {
       id: 'node-demo-4',
       category: 'goal',
-      title: 'Build AI-native tools',
-      content: 'Wants to create tools that expose and make AI behaviour transparent and controllable for end users.',
-      tags: ['ai', 'product'],
+      title: 'Build AI-native, user-controlled tools',
+      content: 'Wants to create tools that expose and make AI behaviour transparent and controllable for end users. Interested in HCI research applied to AI interfaces.',
+      tags: ['ai', 'product', 'hci'],
       confidence: 'medium',
       source: 'inferred',
       createdAt: t,
       updatedAt: t,
       linkedIds: ['node-demo-1'],
+      active: true,
+      pinned: false,
+      memoryType: 'semantic',
+      scope: 'Goals',
+      importance: 0.75,
     },
     {
       id: 'node-demo-5',
       category: 'conversation',
       title: 'Mental model UI discussion',
-      content: 'Asked for an interface to view/manage the AI agent\'s mental model with shadcn/ui components. Wants CRUD, Claude integration, and meaningful commits.',
-      tags: ['product', 'design'],
+      content: 'Asked for an interface to visualise and manage the AI agent\'s mental model with shadcn/ui. Cited HCI papers: Memory Sandbox (UIST \'23), CHI \'25, Regulatory Potential, Xu 2025. Wants short concise commits.',
+      tags: ['product', 'design', 'hci'],
       confidence: 'high',
       source: 'direct',
       createdAt: t,
       updatedAt: t,
       linkedIds: ['node-demo-1'],
+      active: true,
+      pinned: false,
+      memoryType: 'episodic',
+      scope: 'Work',
+      importance: 0.8,
     },
   ]
 }
@@ -97,6 +146,9 @@ export interface NodeFormData {
   tags: string[]
   confidence: ConfidenceLevel
   source: string
+  memoryType: MemoryType
+  scope: string
+  importance: number
 }
 
 export function useMentalModelStore() {
@@ -117,6 +169,9 @@ export function useMentalModelStore() {
       createdAt: now(),
       updatedAt: now(),
       linkedIds: [],
+      active: true,
+      pinned: false,
+      position: undefined,
     }
     mutate(prev => [node, ...prev])
     return node
@@ -135,6 +190,24 @@ export function useMentalModelStore() {
     )
   }, [mutate])
 
+  const toggleActive = useCallback((id: string) => {
+    mutate(prev => prev.map(n =>
+      n.id === id ? { ...n, active: !n.active, updatedAt: now() } : n
+    ))
+  }, [mutate])
+
+  const togglePin = useCallback((id: string) => {
+    mutate(prev => prev.map(n =>
+      n.id === id ? { ...n, pinned: !n.pinned, updatedAt: now() } : n
+    ))
+  }, [mutate])
+
+  const setPosition = useCallback((id: string, x: number, y: number) => {
+    mutate(prev => prev.map(n =>
+      n.id === id ? { ...n, position: { x, y } } : n
+    ))
+  }, [mutate])
+
   const linkNodes = useCallback((fromId: string, toId: string) => {
     mutate(prev => prev.map(n =>
       n.id === fromId && !n.linkedIds.includes(toId)
@@ -151,13 +224,47 @@ export function useMentalModelStore() {
     ))
   }, [mutate])
 
-  const importFromClaude = useCallback((newNodes: MentalModelNode[]) => {
+  const importNodes = useCallback((newNodes: MentalModelNode[]) => {
     mutate(prev => {
       const existingIds = new Set(prev.map(n => n.id))
-      const toAdd = newNodes.filter(n => !existingIds.has(n.id))
+      const toAdd = newNodes.filter(n => !existingIds.has(n.id)).map(migrate)
       return [...toAdd, ...prev]
     })
   }, [mutate])
 
-  return { nodes, addNode, updateNode, deleteNode, linkNodes, unlinkNodes, importFromClaude }
+  const addSummaryNode = useCallback((summary: { title: string; content: string; tags: string[]; scope: string }) => {
+    const node: MentalModelNode = {
+      id: generateId(),
+      category: 'fact',
+      title: summary.title,
+      content: summary.content,
+      tags: summary.tags,
+      confidence: 'high',
+      source: 'claude-summary',
+      createdAt: now(),
+      updatedAt: now(),
+      linkedIds: [],
+      active: true,
+      pinned: false,
+      memoryType: 'semantic',
+      scope: summary.scope,
+      importance: 0.9,
+    }
+    mutate(prev => [node, ...prev])
+    return node
+  }, [mutate])
+
+  return {
+    nodes,
+    addNode,
+    updateNode,
+    deleteNode,
+    toggleActive,
+    togglePin,
+    setPosition,
+    linkNodes,
+    unlinkNodes,
+    importNodes,
+    addSummaryNode,
+  }
 }
