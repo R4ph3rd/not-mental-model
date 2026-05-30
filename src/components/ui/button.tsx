@@ -4,22 +4,22 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:t-accent-ring disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-purple-600 text-white shadow hover:bg-purple-700',
-        destructive: 'bg-red-900 text-red-100 shadow-sm hover:bg-red-800',
-        outline: 'border border-white/10 bg-transparent shadow-sm hover:bg-white/5 hover:text-white',
-        secondary: 'bg-white/10 text-white shadow-sm hover:bg-white/15',
-        ghost: 'hover:bg-white/5 hover:text-white text-white/70',
-        link: 'text-purple-400 underline-offset-4 hover:underline',
+        default:     't-accent-bg text-white shadow hover:opacity-90',
+        destructive: 'bg-red-700/80 text-white shadow-sm hover:bg-red-700',
+        outline:     'border t-border t-card t-text shadow-sm hover:opacity-80',
+        secondary:   'bg-white/10 t-text shadow-sm hover:bg-white/15',
+        ghost:       't-text hover:bg-white/8',
+        link:        't-accent underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-10 rounded-md px-8',
-        icon: 'h-9 w-9',
+        sm:      'h-8 rounded-md px-3 text-xs',
+        lg:      'h-10 rounded-md px-8',
+        icon:    'h-9 w-9',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },
