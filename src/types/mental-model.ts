@@ -1,6 +1,6 @@
 export type NodeCategory = 'project' | 'conversation' | 'fact' | 'preference' | 'goal' | 'skill'
-
 export type ConfidenceLevel = 'high' | 'medium' | 'low'
+export type MemoryType = 'episodic' | 'semantic'
 
 export interface MentalModelNode {
   id: string
@@ -13,11 +13,18 @@ export interface MentalModelNode {
   createdAt: string
   updatedAt: string
   linkedIds: string[]
-}
-
-export interface MentalModelStore {
-  nodes: MentalModelNode[]
-  lastSyncedAt: string | null
+  // Memory Sandbox (UIST 2023): toggle agent visibility
+  active: boolean
+  // Xu 2025: user pin to retain against decay
+  pinned: boolean
+  // Xu 2025: episodic = specific event/conversation, semantic = abstracted fact
+  memoryType: MemoryType
+  // CHI 2025: user-defined project/domain scope
+  scope: string
+  // Xu 2025: 0–1 user-specified utility weight
+  importance: number
+  // Canvas spatial layout
+  position?: { x: number; y: number }
 }
 
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {
