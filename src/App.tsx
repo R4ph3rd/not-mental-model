@@ -8,7 +8,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Sidebar } from '@/components/Sidebar'
 import { NodeCard } from '@/components/NodeCard'
 import { NodeForm } from '@/components/NodeForm'
-import { ClaudeSync } from '@/components/ClaudeSync'
+import { AISync } from '@/components/AISync'
 import { StatsBar } from '@/components/StatsBar'
 import { Canvas } from '@/components/canvas/Canvas'
 import { useMentalModelStore } from '@/store/mental-model-store'
@@ -249,7 +249,7 @@ export default function App() {
 
         <Dialog open={claudeOpen} onOpenChange={setClaudeOpen}>
           <DialogContent className="max-w-xl">
-            <ClaudeSync
+            <AISync
               onImport={importNodes}
               onClose={() => setClaudeOpen(false)}
               selectedNodes={selectedNodes}
