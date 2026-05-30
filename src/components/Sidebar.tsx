@@ -1,4 +1,4 @@
-import { Brain, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap, Folder } from 'lucide-react'
+import { Brain, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap, Folder, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { NodeCategory } from '@/types/mental-model'
 import { CATEGORY_LABELS } from '@/types/mental-model'
@@ -35,13 +35,17 @@ export function Sidebar({
 }: Props) {
   return (
     <aside className="w-52 shrink-0 border-r t-border t-sidebar flex flex-col gap-0.5 py-4 px-2 overflow-y-auto">
-      {/* Agent visibility counter */}
+      {/* Context counter */}
       <div className="mx-1 mb-3 px-3 py-2.5 rounded-lg border t-border t-card">
-        <p className="text-[10px] uppercase tracking-widest t-muted mb-0.5">Active for agent</p>
+        <p className="text-[10px] uppercase tracking-widest t-muted mb-0.5 flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          Visible to agent
+        </p>
         <p className="text-lg font-bold t-text leading-none">
           {activeCount}
           <span className="text-sm font-normal t-muted"> / {total}</span>
         </p>
+        <p className="text-[10px] t-muted mt-1">nodes sent in context</p>
       </div>
 
       <p className="text-[10px] uppercase tracking-widest t-muted px-3 mb-1">Categories</p>

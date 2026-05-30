@@ -129,7 +129,7 @@ export default function App() {
           <header className="flex items-center gap-3 px-5 py-3 border-b t-border shrink-0 t-bg">
             <Brain className="h-5 w-5 t-accent shrink-0" />
             <div className="leading-tight">
-              <p className="text-sm font-semibold t-text">Mental Model</p>
+              <p className="text-sm font-semibold t-text">Not-a-mental-model</p>
               <p className="text-[10px] t-muted">AI knowledge base</p>
             </div>
 
