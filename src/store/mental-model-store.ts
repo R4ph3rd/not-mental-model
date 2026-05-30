@@ -38,6 +38,13 @@ function load(): MentalModelNode[] {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultNodes()
     const parsed = JSON.parse(raw) as Partial<MentalModelNode>[]
+    // Migrate: if all stored nodes are old single-scope demo nodes, reset to richer defaults
+    const isOldDemo = parsed.every(n => typeof n.id === 'string' && n.id.startsWith('node-demo-'))
+    if (isOldDemo) {
+      const fresh = defaultNodes()
+      persist(fresh)
+      return fresh
+    }
     return parsed.map(migrate)
   } catch {
     return defaultNodes()

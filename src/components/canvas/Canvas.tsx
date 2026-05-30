@@ -100,12 +100,17 @@ export function Canvas({
   const handleMouseUp = useCallback((e: MouseEvent) => {
     if (dragRef.current) {
       const d = dragRef.current
-      if (!d.hasMoved) onToggleSelect(d.id, e.ctrlKey || e.metaKey)
-      else onSetPosition(d.id, d.x, d.y)
+      if (!d.hasMoved) {
+        const multi = e.ctrlKey || e.metaKey
+        onToggleSelect(d.id, multi)
+        if (!multi) onEditRequest(d.id)
+      } else {
+        onSetPosition(d.id, d.x, d.y)
+      }
       dragRef.current = null
     }
     panRef.current = null
-  }, [onToggleSelect, onSetPosition])
+  }, [onToggleSelect, onSetPosition, onEditRequest])
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove)

@@ -92,6 +92,23 @@ export function NodeCard({
   const [expanded, setExpanded] = useState(false)
   const isLong = node.content.length > 140
   const decay = computeDecayScore(node)
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleCardClick(e: React.MouseEvent) {
+    const multi = e.ctrlKey || e.metaKey
+    if (clickTimer.current) {
+      // Second click of a double-click — cancel pending inspector open
+      clearTimeout(clickTimer.current)
+      clickTimer.current = null
+      onSelect(node.id, multi)
+      return
+    }
+    clickTimer.current = setTimeout(() => {
+      clickTimer.current = null
+      onSelect(node.id, multi)
+      if (!multi) onEditRequest(node.id)
+    }, 220)
+  }
 
   return (
     <div
@@ -102,10 +119,7 @@ export function NodeCard({
           : 't-border t-card hover:border-white/20',
         !node.active && 'opacity-55',
       )}
-      onClick={e => {
-        onSelect(node.id, e.ctrlKey || e.metaKey)
-        if (!e.ctrlKey && !e.metaKey) onEditRequest(node.id)
-      }}
+      onClick={handleCardClick}
     >
       {/* Inactive badge */}
       {!node.active && (
