@@ -1,19 +1,64 @@
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ─── Color tokens ─────────────────────────────────────────────────── */
+/* Dark (default): Discord-inspired, slightly darker */
+:root {
+  --bg:      37 38 44;    /* #25262c  main content  */
+  --bg-2:    27 28 33;    /* #1b1c21  sidebar       */
+  --bg-3:    20 21 26;    /* #14151a  deepest/canvas*/
+  --bg-card: 46 47 54;    /* #2e2f36  card surface  */
+  --bg-ui:   56 58 66;    /* #383a42  modals/popups */
+  --brd:     60 62 72;    /* #3c3e48  borders       */
+  --tx:      220 221 226; /* #dcdde2  text          */
+  --tx-2:    110 113 122; /* #6e717a  muted text    */
+  --p-h: 258;
+  --p-s: 78%;
+  --p-l: 65%;
 }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
+/* Light mode */
+html.light {
+  --bg:      242 243 246; /* #f2f3f6 */
+  --bg-2:    228 230 234; /* #e4e6ea */
+  --bg-3:    255 255 255; /* #ffffff */
+  --bg-card: 255 255 255; /* #ffffff */
+  --bg-ui:   255 255 255; /* #ffffff */
+  --brd:     210 213 220; /* #d2d5dc */
+  --tx:       46  50  58; /* #2e323a */
+  --tx-2:    116 124 140; /* #747c8c */
 }
 
+/* ─── Semantic utilities ────────────────────────────────────────────── */
+.t-bg       { background-color: rgb(var(--bg)); }
+.t-sidebar  { background-color: rgb(var(--bg-2)); }
+.t-deep     { background-color: rgb(var(--bg-3)); }
+.t-card     { background-color: rgb(var(--bg-card)); }
+.t-ui       { background-color: rgb(var(--bg-ui)); }
+.t-border   { border-color: rgb(var(--brd)); }
+.t-text     { color: rgb(var(--tx)); }
+.t-muted    { color: rgb(var(--tx-2)); }
+
+.t-accent         { color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+.t-accent-bg      { background-color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+.t-accent-subtle  { background-color: hsl(var(--p-h) var(--p-s) var(--p-l) / 0.12); }
+.t-accent-border  { border-color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+.t-accent-ring    { outline-color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+
+/* ─── Base ──────────────────────────────────────────────────────────── */
+html, body { height: 100%; }
 body {
-  background: #09090b;
-  color: #fafafa;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  margin: 0;
+  background-color: rgb(var(--bg-3));
+  color: rgb(var(--tx));
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+#root { height: 100%; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--brd)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--tx-2)); }
