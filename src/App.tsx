@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, Download, Settings } from 'lucide-react'
+import { Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, Download, Settings, Clipboard, ClipboardCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -39,6 +39,26 @@ export default function App() {
   const [onboardingDone, setOnboardingDone] = useState(
     () => !!localStorage.getItem('mm-onboarding-done')
   )
+  const [copied, setCopied] = useState(false)
+
+  function handleCopyContext() {
+    const active = nodes.filter(n => n.active)
+    if (active.length === 0) return
+    const groups: Record<string, typeof active> = {}
+    for (const n of active) {
+      const key = n.category.charAt(0).toUpperCase() + n.category.slice(1) + 's'
+      ;(groups[key] ??= []).push(n)
+    }
+    const lines = ['## My context\n']
+    for (const [group, items] of Object.entries(groups)) {
+      lines.push(`### ${group}`)
+      for (const n of items) lines.push(`- **${n.title}**: ${n.content}`)
+      lines.push('')
+    }
+    navigator.clipboard.writeText(lines.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const scopes = useMemo(() => {
     const s = new Set(nodes.map(n => n.scope).filter(Boolean))
@@ -164,12 +184,18 @@ export default function App() {
                   Summarize ({selectedIds.size})
                 </Button>
               )}
+              <Button size="sm" variant="ghost" onClick={handleCopyContext}
+                title="Copy active nodes as context block — paste into any AI conversation">
+                {copied
+                  ? <ClipboardCheck className="h-3.5 w-3.5 text-green-400" />
+                  : <Clipboard className="h-3.5 w-3.5" />}
+              </Button>
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
                 <Download className="h-3.5 w-3.5" />
               </Button>
               <Button size="sm" variant="outline" onClick={() => { setAiTab('extract'); setAiOpen(true) }}>
                 <Sparkles className="h-3.5 w-3.5 t-accent" />
-                Extract
+                Import / Extract
               </Button>
               <Button size="sm" onClick={() => setAddOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />Add

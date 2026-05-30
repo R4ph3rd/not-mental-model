@@ -117,9 +117,12 @@ export function SettingsPanel({ onClose }: Props) {
             <KeyRound className="h-3 w-3" /> API Keys
           </p>
           <p className="text-[11px] t-muted">Keys are stored only in your browser's localStorage and sent directly to each provider.</p>
+          <p className="text-[10px] text-green-400/80">Free tier providers: Groq, Gemini (AI Studio), Cerebras, Ollama (local)</p>
+          <ApiKeyRow label="Groq (free)"        storageKey="mm-groq-key"    placeholder="gsk_…" />
+          <ApiKeyRow label="Gemini (free)"      storageKey="mm-gemini-key"  placeholder="AIza…" />
+          <ApiKeyRow label="Cerebras (free)"    storageKey="mm-cerebras-key" placeholder="csk-…" />
           <ApiKeyRow label="Anthropic (Claude)" storageKey="mm-claude-key"  placeholder="sk-ant-…" />
           <ApiKeyRow label="OpenAI (GPT)"       storageKey="mm-openai-key"  placeholder="sk-…" />
-          <ApiKeyRow label="Google (Gemini)"    storageKey="mm-gemini-key"  placeholder="AIza…" />
           <ApiKeyRow label="Mistral"            storageKey="mm-mistral-key" placeholder="API key…" />
           <div className="space-y-1.5">
             <p className="text-xs t-text font-medium">Ollama base URL</p>
