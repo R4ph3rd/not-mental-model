@@ -16,38 +16,32 @@ interface Props {
   onToggleActive: (id: string) => void
   onTogglePin: (id: string) => void
   onSetPosition: (id: string, x: number, y: number) => void
+  onEditRequest: (id: string) => void
 }
 
 interface DragState {
-  type: 'node'
-  id: string
-  startMouseX: number
-  startMouseY: number
-  startNodeX: number
-  startNodeY: number
-  x: number
-  y: number
-  hasMoved: boolean
+  type: 'node'; id: string
+  startMouseX: number; startMouseY: number
+  startNodeX: number; startNodeY: number
+  x: number; y: number; hasMoved: boolean
 }
 
 interface PanState {
-  startMouseX: number
-  startMouseY: number
-  startPanX: number
-  startPanY: number
+  startMouseX: number; startMouseY: number
+  startPanX: number; startPanY: number
 }
 
 export function Canvas({
   nodes, selectedIds,
   onToggleSelect, onUpdateNode, onDeleteNode,
-  onToggleActive, onTogglePin, onSetPosition,
+  onToggleActive, onTogglePin, onSetPosition, onEditRequest,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pan, setPan] = useState({ x: 60, y: 60 })
   const [scale, setScale] = useState(1)
 
   const dragRef = useRef<DragState | null>(null)
-  const panRef = useRef<PanState | null>(null)
+  const panRef  = useRef<PanState | null>(null)
   const [, forceUpdate] = useState(0)
 
   const defaultPositions = useMemo(() => computeDefaultPositions(nodes), [nodes])
@@ -72,23 +66,17 @@ export function Canvas({
     const pos = node.position ?? defaultPositions[id] ?? { x: 0, y: 0 }
     dragRef.current = {
       type: 'node', id,
-      startMouseX: e.clientX,
-      startMouseY: e.clientY,
-      startNodeX: pos.x,
-      startNodeY: pos.y,
-      x: pos.x,
-      y: pos.y,
-      hasMoved: false,
+      startMouseX: e.clientX, startMouseY: e.clientY,
+      startNodeX: pos.x, startNodeY: pos.y,
+      x: pos.x, y: pos.y, hasMoved: false,
     }
   }
 
   function handleCanvasMouseDown(e: React.MouseEvent) {
     if (e.button !== 0) return
     panRef.current = {
-      startMouseX: e.clientX,
-      startMouseY: e.clientY,
-      startPanX: pan.x,
-      startPanY: pan.y,
+      startMouseX: e.clientX, startMouseY: e.clientY,
+      startPanX: pan.x, startPanY: pan.y,
     }
   }
 
@@ -99,9 +87,7 @@ export function Canvas({
       const dx = (e.clientX - d.startMouseX) / scale
       const dy = (e.clientY - d.startMouseY) / scale
       dragRef.current = {
-        ...d,
-        x: d.startNodeX + dx,
-        y: d.startNodeY + dy,
+        ...d, x: d.startNodeX + dx, y: d.startNodeY + dy,
         hasMoved: d.hasMoved || Math.abs(dx) > 4 || Math.abs(dy) > 4,
       }
       needsUpdate = true
@@ -116,11 +102,8 @@ export function Canvas({
   const handleMouseUp = useCallback((e: MouseEvent) => {
     if (dragRef.current) {
       const d = dragRef.current
-      if (!d.hasMoved) {
-        onToggleSelect(d.id, e.ctrlKey || e.metaKey)
-      } else {
-        onSetPosition(d.id, d.x, d.y)
-      }
+      if (!d.hasMoved) onToggleSelect(d.id, e.ctrlKey || e.metaKey)
+      else onSetPosition(d.id, d.x, d.y)
       dragRef.current = null
     }
     panRef.current = null
@@ -135,7 +118,6 @@ export function Canvas({
     }
   }, [handleMouseMove, handleMouseUp])
 
-  // Zoom toward cursor
   function handleWheel(e: React.WheelEvent) {
     e.preventDefault()
     const rect = containerRef.current!.getBoundingClientRect()
@@ -158,14 +140,11 @@ export function Canvas({
     const maxX = Math.max(...allPos.map(p => p.x)) + CARD_W
     const maxY = Math.max(...allPos.map(p => p.y)) + CARD_H
     const pad = 80
-    const scaleX = (rect.width - pad * 2) / (maxX - minX)
-    const scaleY = (rect.height - pad * 2) / (maxY - minY)
-    const newScale = Math.min(scaleX, scaleY, 1.5)
+    const newScale = Math.min((rect.width - pad * 2) / (maxX - minX), (rect.height - pad * 2) / (maxY - minY), 1.5)
     setPan({ x: pad - minX * newScale, y: pad - minY * newScale })
     setScale(newScale)
   }
 
-  // Live positions for rendering (includes dragging node)
   const livePositions = useMemo(() => {
     const d = dragRef.current
     if (!d) return positions
@@ -176,23 +155,19 @@ export function Canvas({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden bg-zinc-950 cursor-grab active:cursor-grabbing"
+      className="relative w-full h-full overflow-hidden t-deep cursor-grab active:cursor-grabbing"
       style={{
-        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(circle, rgb(var(--brd) / 0.6) 1px, transparent 1px)',
         backgroundSize: '24px 24px',
       }}
       onMouseDown={handleCanvasMouseDown}
       onWheel={handleWheel}
     >
-      {/* Transformed canvas layer */}
       <div
         className="absolute"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: '0 0' }}
       >
-        {/* SVG links under nodes */}
         <CanvasLinks nodes={nodes} positions={livePositions} />
-
-        {/* Nodes */}
         {nodes.map(node => (
           <CanvasNode
             key={node.id}
@@ -200,30 +175,28 @@ export function Canvas({
             position={livePositions[node.id] ?? { x: 0, y: 0 }}
             selected={selectedIds.has(node.id)}
             onMouseDown={handleNodeMouseDown}
-            onDoubleClick={() => {}}
             onToggleActive={onToggleActive}
             onTogglePin={onTogglePin}
-            onUpdate={onUpdateNode}
-            onDelete={onDeleteNode}
+            onDelete={id => { onDeleteNode(id) }}
+            onEditRequest={onEditRequest}
           />
         ))}
       </div>
 
       {/* Zoom controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-1">
-        <Button size="icon" variant="secondary" className="h-7 w-7 text-xs" onClick={() => setScale(s => Math.min(2.5, s * 1.2))}>
+        <Button size="icon" variant="secondary" className="h-7 w-7" onClick={() => setScale(s => Math.min(2.5, s * 1.2))}>
           <ZoomIn className="h-3.5 w-3.5" />
         </Button>
-        <Button size="icon" variant="secondary" className="h-7 w-7 text-xs" onClick={() => setScale(s => Math.max(0.25, s * 0.8))}>
+        <Button size="icon" variant="secondary" className="h-7 w-7" onClick={() => setScale(s => Math.max(0.25, s * 0.8))}>
           <ZoomOut className="h-3.5 w-3.5" />
         </Button>
-        <Button size="icon" variant="secondary" className="h-7 w-7" onClick={fitAll} title="Fit all nodes">
+        <Button size="icon" variant="secondary" className="h-7 w-7" onClick={fitAll} title="Fit all">
           <Maximize2 className="h-3.5 w-3.5" />
         </Button>
       </div>
 
-      {/* Scale indicator */}
-      <div className="absolute bottom-4 left-4 text-[10px] text-white/20">
+      <div className="absolute bottom-4 left-4 text-[10px] t-muted">
         {Math.round(scale * 100)}%
       </div>
     </div>
