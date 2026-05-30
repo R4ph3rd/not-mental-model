@@ -5,13 +5,11 @@ import { CanvasLinks } from './CanvasLinks'
 import { CanvasNode } from './CanvasNode'
 import { computeDefaultPositions, CARD_W, CARD_H } from './layout'
 import type { MentalModelNode } from '@/types/mental-model'
-import type { NodeFormData } from '@/store/mental-model-store'
 
 interface Props {
   nodes: MentalModelNode[]
   selectedIds: Set<string>
   onToggleSelect: (id: string, multi: boolean) => void
-  onUpdateNode: (id: string, data: Partial<NodeFormData>) => void
   onDeleteNode: (id: string) => void
   onToggleActive: (id: string) => void
   onTogglePin: (id: string) => void
@@ -33,7 +31,7 @@ interface PanState {
 
 export function Canvas({
   nodes, selectedIds,
-  onToggleSelect, onUpdateNode, onDeleteNode,
+  onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onSetPosition, onEditRequest,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
