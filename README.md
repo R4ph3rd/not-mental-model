@@ -1,73 +1,44 @@
-# React + TypeScript + Vite
+# Mental Model
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React interface for **visualising and managing the knowledge base of an AI agent** — everything it knows about you, your projects, preferences, goals, and past conversations. Memory is treated as data you can see, edit, and control, rather than an opaque black box.
 
-Currently, two official plugins are available:
+Built with React + TypeScript, Vite, Tailwind v4, shadcn/ui-style components, and the Claude API.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What it does
 
-## React Compiler
+Each thing the agent "knows" is a **node** with a category (project, conversation, fact, preference, goal, skill), a memory type, a confidence level, tags, and a project scope. You can browse, search, edit, link, and delete these nodes — and directly control which ones the agent is allowed to use.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Two views
+- **Canvas** — a spatial map of nodes auto-clustered by category, with links drawn between related memories. Drag to reposition, scroll to zoom, drag the background to pan, "fit all" to recenter.
+- **Grid** — a dense card layout for scanning and bulk actions.
 
-## Expanding the ESLint configuration
+### Core actions
+- **Toggle visibility** (eye icon) — hide a node from the agent without deleting it.
+- **Pin** — protect a node from decay so it's always retained.
+- **Add / Edit / Delete** — full CRUD via a form (category, memory type, scope, importance, confidence).
+- **Scopes** — group memories by project/domain (Work, Personal, …) and filter the whole view to one scope.
+- **Decay bar** — every node shows a retention strength from `recency × 0.4 + importance × 0.35 + confidence × 0.25`; pinned nodes stay at full.
+- **Extract** (Claude) — paste a conversation or notes and Claude turns it into structured nodes.
+- **Summarize** (Claude) — select several nodes and distill them into one consolidated semantic memory.
+- **Export** — download selected (or all) nodes as JSON.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Everything persists to `localStorage`. The Claude API key is stored locally and only sent to Anthropic.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Run it
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev      # start dev server
+npm run build    # type-check + production build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open the dev URL, then click **Extract** to paste a conversation, or **Add** to create nodes by hand. To use Extract/Summarize, paste an Anthropic API key (`sk-ant-...`) into the dialog.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Grounding in HCI research
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The design borrows directly from recent work on agent-memory interfaces:
+
+- **Memory Sandbox** (Huang et al., UIST 2023) — the "memory as an editable object" framing and its affordances: toggle visibility, add/edit/delete, and summarize.
+- **Users' Expectations and Practices with Agent Memory** (CHI 2025) — evidence that users want memory organised into project/task **scopes**, which drives the scope hierarchy.
+- **On the Regulatory Potential of User Interfaces for AI Agent Governance** (2024) — argues agent memory should be **inspectable and editable** with easily discoverable controls; hence always-visible edit/toggle controls.
+- **Memory Management for Long-Running Low-Code Agents** (Xu, 2025) — the **episodic/semantic** split and the **importance-weighted decay** mechanic with visual tagging for what to retain.
