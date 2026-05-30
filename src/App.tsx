@@ -49,12 +49,18 @@ export default function App() {
       const key = n.category.charAt(0).toUpperCase() + n.category.slice(1) + 's'
       ;(groups[key] ??= []).push(n)
     }
-    const lines = ['## My context\n']
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    const lines = [`## My context — ${date}\n`]
     for (const [group, items] of Object.entries(groups)) {
       lines.push(`### ${group}`)
       for (const n of items) lines.push(`- **${n.title}**: ${n.content}`)
       lines.push('')
     }
+    lines.push('---')
+    lines.push(
+      'This context was exported from my personal knowledge graph (Not-a-mental-model) and reflects my up-to-date information. ' +
+      'If any of the above differs from or adds to what you already know about me, please update your memory accordingly so we stay in sync.'
+    )
     navigator.clipboard.writeText(lines.join('\n'))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
