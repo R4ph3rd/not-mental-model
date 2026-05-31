@@ -245,11 +245,26 @@ export default function App() {
               <Button size="sm" variant="outline" onClick={() => { setAiTab('extract'); setAiOpen(true) }}>
                 <FolderInput className="h-3.5 w-3.5 t-accent" />Import / Extract
               </Button>
-              {/* Explore — exploratory inference from full knowledge base */}
-              <Button size="sm" variant="outline" onClick={() => setInferMode('explore-infer')}
-                title="Explore: infer hidden facts or suggest relevant knowledge">
-                <Telescope className="h-3.5 w-3.5 t-accent" />Explore
-              </Button>
+              {/* Explore — two exploratory inference modes via a small dropdown */}
+              <div className="relative group">
+                <Button size="sm" variant="outline"
+                  title="Explore: infer hidden facts or suggest relevant knowledge"
+                  onClick={() => setInferMode('explore-infer')}>
+                  <Telescope className="h-3.5 w-3.5 t-accent" />Explore
+                </Button>
+                <div className="absolute right-0 top-full mt-1 z-20 hidden group-hover:flex flex-col w-52 t-ui border t-border rounded-xl shadow-xl overflow-hidden">
+                  <button className="flex flex-col px-3 py-2.5 text-left hover:t-accent-subtle transition-colors border-b t-border"
+                    onClick={() => setInferMode('explore-infer')}>
+                    <span className="text-xs font-medium t-text">Infer hidden facts</span>
+                    <span className="text-[10px] t-muted mt-0.5">What's probably true but not yet recorded?</span>
+                  </button>
+                  <button className="flex flex-col px-3 py-2.5 text-left hover:t-accent-subtle transition-colors"
+                    onClick={() => setInferMode('explore-suggest')}>
+                    <span className="text-xs font-medium t-text">Suggest relevant knowledge</span>
+                    <span className="text-[10px] t-muted mt-0.5">Skills, topics, or goals you might add</span>
+                  </button>
+                </div>
+              </div>
               <Button size="sm" onClick={() => setAddOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />Add
               </Button>
