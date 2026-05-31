@@ -13,7 +13,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: 'groq',
     label: 'Groq',
     storageKey: 'mm-groq-key',
-    baseUrl: 'https://api.groq.com/openai',
+    baseUrl: 'https://api.groq.com/openai/v1',
     defaultModel: 'llama-3.3-70b-versatile',
     free: true,
     type: 'openai-compat',
