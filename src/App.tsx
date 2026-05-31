@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
-  Download, Settings, Clipboard, ClipboardCheck, MessageSquare,
+  Share2, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -223,24 +223,19 @@ export default function App() {
             </div>
 
             <div className="ml-auto flex items-center gap-1.5">
-              {hasSelection && (
-                <Button size="sm" variant="outline" onClick={() => { setAiTab('summarize'); setAiOpen(true) }}>
-                  <Sparkles className="h-3.5 w-3.5 t-accent" />Summarize ({selectedIds.size})
-                </Button>
-              )}
               <Button size="sm" variant="ghost" onClick={handleCopyContext}
                 title="Copy active (non-sensitive) nodes as context — paste into any AI chat">
                 {copied ? <ClipboardCheck className="h-3.5 w-3.5 text-green-400" /> : <Clipboard className="h-3.5 w-3.5" />}
               </Button>
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
-                <Download className="h-3.5 w-3.5" />
+                <Share2 className="h-3.5 w-3.5" />
               </Button>
               <Button size="sm" variant={chatOpen ? 'secondary' : 'outline'}
                 onClick={() => { setChatOpen(v => !v); setSettingsOpen(false) }}>
                 <MessageSquare className="h-3.5 w-3.5" />Chat
               </Button>
               <Button size="sm" variant="outline" onClick={() => { setAiTab('extract'); setAiOpen(true) }}>
-                <Sparkles className="h-3.5 w-3.5 t-accent" />Import / Extract
+                <FolderInput className="h-3.5 w-3.5 t-accent" />Import / Extract
               </Button>
               <Button size="sm" onClick={() => setAddOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />Add
@@ -251,10 +246,6 @@ export default function App() {
               </Button>
             </div>
           </header>
-
-          <div className="px-5 py-2 border-b t-border shrink-0">
-            <StatsBar nodes={nodes} selectedCount={selectedIds.size} />
-          </div>
 
           {/* Views + panels */}
           <div className="flex flex-1 min-h-0">
@@ -307,26 +298,31 @@ export default function App() {
                 </div>
               )}
 
-              {hasSelection && (
-                <div className="border-t t-border px-5 py-2.5 flex items-center gap-3 t-sidebar shrink-0">
-                  <span className="text-xs t-muted flex-1">
-                    {selectedIds.size} selected
-                    {selectedIds.size === 1 && (() => {
-                      const n = nodes.find(x => x.id === [...selectedIds][0])
-                      return n ? <> — <span className="t-text">{n.title}</span></> : null
-                    })()}
-                  </span>
-                  <Button size="sm" variant="outline" onClick={() => { setAiTab('summarize'); setAiOpen(true) }}>
-                    <Sparkles className="h-3.5 w-3.5 t-accent" />Summarize
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => {
-                    for (const id of selectedIds) deleteNode(id); setSelectedIds(new Set())
-                  }}>
-                    <Trash2 className="h-3.5 w-3.5" />Delete
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
-                </div>
-              )}
+              {/* Bottom bar — stats when idle, selection actions when nodes selected */}
+              <div className="border-t t-border px-5 py-2 flex items-center gap-3 t-sidebar shrink-0 min-h-[40px]">
+                {hasSelection ? (
+                  <>
+                    <span className="text-xs t-muted flex-1">
+                      {selectedIds.size} selected
+                      {selectedIds.size === 1 && (() => {
+                        const n = nodes.find(x => x.id === [...selectedIds][0])
+                        return n ? <> — <span className="t-text">{n.title}</span></> : null
+                      })()}
+                    </span>
+                    <Button size="sm" variant="outline" onClick={() => { setAiTab('summarize'); setAiOpen(true) }}>
+                      <Sparkles className="h-3.5 w-3.5 t-accent" />Summarize
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => {
+                      for (const id of selectedIds) deleteNode(id); setSelectedIds(new Set())
+                    }}>
+                      <Trash2 className="h-3.5 w-3.5" />Delete
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+                  </>
+                ) : (
+                  <StatsBar nodes={nodes} />
+                )}
+              </div>
             </div>
 
             {inspectorId && (
