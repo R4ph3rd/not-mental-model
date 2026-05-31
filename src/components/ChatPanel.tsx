@@ -257,7 +257,7 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onClose }: Props) {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
           placeholder={memoPaused ? "Chat (not saved to memory)…" : "Ask anything… (Enter to send)"}
           rows={2} className="flex-1 resize-none text-xs" />
-        <Button size="icon" className="h-auto self-end" onClick={send} disabled={loading || !input.trim()}>
+        <Button className="self-end h-9 px-3 shrink-0" onClick={send} disabled={loading || !input.trim()}>
           <Send className="h-3.5 w-3.5" />
         </Button>
       </div>
