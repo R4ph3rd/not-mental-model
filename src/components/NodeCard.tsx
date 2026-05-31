@@ -51,9 +51,15 @@ function InlineText({ value, onSave, tag = 'p', className }: {
   const [draft, setDraft] = useState(value)
   const ref = useRef<HTMLTextAreaElement>(null)
 
-  function start(e: React.MouseEvent) {
-    e.stopPropagation(); setDraft(value); setEditing(true)
+  function startEdit(e: React.MouseEvent) {
+    e.stopPropagation()
+    setDraft(value); setEditing(true)
     setTimeout(() => ref.current?.focus(), 0)
+  }
+  // Single-click on text: stop propagation so the card's onClick (open inspector) doesn't fire.
+  // Ctrl/Cmd+click still propagates so multi-select works.
+  function handleClick(e: React.MouseEvent) {
+    if (!e.ctrlKey && !e.metaKey) e.stopPropagation()
   }
   function save() { setEditing(false); if (draft.trim() && draft.trim() !== value) onSave(draft.trim()) }
   function onKey(e: React.KeyboardEvent) {
@@ -72,8 +78,12 @@ function InlineText({ value, onSave, tag = 'p', className }: {
     )
   }
   return tag === 'h3'
-    ? <h3 onDoubleClick={start} className={cn('cursor-text select-text', className)} title="Double-click to edit">{value}</h3>
-    : <p onDoubleClick={start} className={cn('cursor-text select-text', className)} title="Double-click to edit">{value}</p>
+    ? <h3 onClick={handleClick} onDoubleClick={startEdit}
+        className={cn('cursor-text select-text', className)}
+        title="Double-click to edit inline">{value}</h3>
+    : <p onClick={handleClick} onDoubleClick={startEdit}
+        className={cn('cursor-text select-text', className)}
+        title="Double-click to edit inline">{value}</p>
 }
 
 export function NodeCard({
@@ -84,18 +94,15 @@ export function NodeCard({
   const [expanded, setExpanded] = useState(false)
   const isLong = node.content.length > 140
   const decay = computeDecayScore(node)
-  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isUnconfirmedAgent = node.provenance === 'agent' && !node.confirmed
   const canDistill = onDistill && node.memoryType === 'episodic' && decay < 0.5 && !node.pinned
 
+  // Single click on card body (not on InlineText — those stop propagation) → select + open inspector.
   function handleCardClick(e: React.MouseEvent) {
     const multi = e.ctrlKey || e.metaKey
-    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; onSelect(node.id, multi); return }
-    clickTimer.current = setTimeout(() => {
-      clickTimer.current = null; onSelect(node.id, multi)
-      if (!multi) onEditRequest(node.id)
-    }, 220)
+    onSelect(node.id, multi)
+    if (!multi) onEditRequest(node.id)
   }
 
   return (
