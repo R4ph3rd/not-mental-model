@@ -169,7 +169,12 @@ export default function App() {
   return (
     <TooltipProvider>
       <div className="flex h-screen w-screen t-bg t-text overflow-hidden">
-        {!onboardingDone && <Onboarding onDone={() => setOnboardingDone(true)} />}
+        {!onboardingDone && (
+          <Onboarding
+            onDone={() => setOnboardingDone(true)}
+            onImport={() => { setAiTab('extract'); setAiOpen(true) }}
+          />
+        )}
 
         {/* ── Sidebar ───────────────────────────────────── */}
         <Sidebar
