@@ -1,6 +1,7 @@
 export type NodeCategory = 'project' | 'conversation' | 'fact' | 'preference' | 'goal' | 'skill'
 export type ConfidenceLevel = 'high' | 'medium' | 'low'
 export type MemoryType = 'episodic' | 'semantic'
+export type Provenance = 'user' | 'agent' | 'extracted'
 
 export interface Project {
   id: string
@@ -14,6 +15,15 @@ export interface Conversation {
   projectId: string
   title: string
   source?: string
+  createdAt: string
+}
+
+// Jones CHI 2025: user-defined groups orthogonal to project hierarchy
+export interface MemoryGroup {
+  id: string
+  name: string
+  color: string
+  active: boolean  // when false, all members are excluded from agent context
   createdAt: string
 }
 
@@ -40,9 +50,17 @@ export interface MentalModelNode {
   importance: number
   // Canvas spatial layout
   position?: { x: number; y: number }
-  // Project/conversation hierarchy
+  // Project/conversation hierarchy; a node can live in multiple conversations (Memory Sandbox cross-sharing)
   projectId?: string
-  conversationId?: string
+  conversationIds: string[]
+  // Jones CHI 2025: user-defined groups
+  groupIds: string[]
+  // Governance paper: who created this memory
+  provenance: Provenance
+  // Governance paper: agent-inferred memories require user confirmation
+  confirmed: boolean
+  // Governance paper: exclude from copy-context and chat context
+  sensitive: boolean
 }
 
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {
