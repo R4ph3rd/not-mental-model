@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, Download, Settings, Clipboard, ClipboardCheck } from 'lucide-react'
+import { Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, Download, Settings, Clipboard, ClipboardCheck, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -13,6 +13,7 @@ import { StatsBar } from '@/components/StatsBar'
 import { Canvas } from '@/components/canvas/Canvas'
 import { InspectorPanel } from '@/components/InspectorPanel'
 import { SettingsPanel } from '@/components/SettingsPanel'
+import { ChatPanel } from '@/components/ChatPanel'
 import { Onboarding } from '@/components/Onboarding'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import type { NodeCategory } from '@/types/mental-model'
@@ -36,6 +37,7 @@ export default function App() {
   const [aiTab, setAiTab]                   = useState<'extract' | 'summarize'>('extract')
   const [inspectorId, setInspectorId]       = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen]     = useState(false)
+  const [chatOpen, setChatOpen]             = useState(false)
   const [onboardingDone, setOnboardingDone] = useState(
     () => !!localStorage.getItem('mm-onboarding-done')
   )
@@ -199,6 +201,11 @@ export default function App() {
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
                 <Download className="h-3.5 w-3.5" />
               </Button>
+              <Button size="sm" variant={chatOpen ? 'secondary' : 'outline'}
+                onClick={() => { setChatOpen(v => !v); setSettingsOpen(false) }}
+                title="In-app chat with memory sync">
+                <MessageSquare className="h-3.5 w-3.5" />Chat
+              </Button>
               <Button size="sm" variant="outline" onClick={() => { setAiTab('extract'); setAiOpen(true) }}>
                 <Sparkles className="h-3.5 w-3.5 t-accent" />
                 Import / Extract
@@ -207,7 +214,7 @@ export default function App() {
                 <Plus className="h-3.5 w-3.5" />Add
               </Button>
               <Button size="icon" variant="ghost" className="h-8 w-8"
-                onClick={() => setSettingsOpen(v => !v)} title="Settings">
+                onClick={() => { setSettingsOpen(v => !v); setChatOpen(false) }} title="Settings">
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
@@ -299,6 +306,9 @@ export default function App() {
                 onDelete={id => { deleteNode(id); setInspectorId(null) }}
               />
             )}
+
+            {/* Chat panel */}
+            {chatOpen && <ChatPanel nodes={nodes} onClose={() => setChatOpen(false)} />}
 
             {/* Settings panel */}
             {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
