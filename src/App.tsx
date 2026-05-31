@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
-  Share2, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare,
+  Share2, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare, Telescope, Bot,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,8 @@ import { InspectorPanel } from '@/components/InspectorPanel'
 import { SettingsPanel } from '@/components/SettingsPanel'
 import { ChatPanel } from '@/components/ChatPanel'
 import { Onboarding } from '@/components/Onboarding'
+import { InferenceModal } from '@/components/InferenceModal'
+import type { InferenceMode } from '@/components/InferenceModal'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import type { NodeCategory, MentalModelNode } from '@/types/mental-model'
@@ -50,6 +52,7 @@ export default function App() {
   const [chatOpen, setChatOpen]         = useState(false)
   const [onboardingDone, setOnboardingDone] = useState(() => !!localStorage.getItem('mm-onboarding-done'))
   const [copied, setCopied] = useState(false)
+  const [inferMode, setInferMode] = useState<InferenceMode | null>(null)
 
   // Governance paper: inactive groups reduce effective active context
   const inactiveGroupIds = useMemo(
@@ -242,6 +245,11 @@ export default function App() {
               <Button size="sm" variant="outline" onClick={() => { setAiTab('extract'); setAiOpen(true) }}>
                 <FolderInput className="h-3.5 w-3.5 t-accent" />Import / Extract
               </Button>
+              {/* Explore — exploratory inference from full knowledge base */}
+              <Button size="sm" variant="outline" onClick={() => setInferMode('explore-infer')}
+                title="Explore: infer hidden facts or suggest relevant knowledge">
+                <Telescope className="h-3.5 w-3.5 t-accent" />Explore
+              </Button>
               <Button size="sm" onClick={() => setAddOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />Add
               </Button>
@@ -317,6 +325,12 @@ export default function App() {
                     <Button size="sm" variant="outline" onClick={() => { setAiTab('summarize'); setAiOpen(true) }}>
                       <Sparkles className="h-3.5 w-3.5 t-accent" />Summarize
                     </Button>
+                    {selectedIds.size >= 2 && (
+                      <Button size="sm" variant="outline" onClick={() => setInferMode('from-selection')}
+                        title="Ask AI to infer new nodes from the selected nodes">
+                        <Bot className="h-3.5 w-3.5 t-accent" />Infer
+                      </Button>
+                    )}
                     <Button size="sm" variant="destructive" onClick={() => {
                       for (const id of selectedIds) deleteNode(id); setSelectedIds(new Set())
                     }}>
@@ -378,6 +392,16 @@ export default function App() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Inference modal — from-selection, explore-infer, explore-suggest */}
+      {inferMode && (
+        <InferenceModal
+          mode={inferMode}
+          nodes={inferMode === 'from-selection' ? selectedNodes : nodes.filter(isNodeVisibleToAgent)}
+          onAddNodes={handleAgentNodes}
+          onClose={() => setInferMode(null)}
+        />
+      )}
     </TooltipProvider>
   )
 }
