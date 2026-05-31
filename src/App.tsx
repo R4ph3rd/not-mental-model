@@ -25,12 +25,15 @@ export default function App() {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, setPosition,
     importNodes, addSummaryNode,
+    projects, addProject,
+    conversations, addConversation,
   } = useMentalModelStore()
 
-  const [view, setView]                     = useState<View>('canvas')
-  const [categoryFilter, setCategoryFilter] = useState<NodeCategory | 'all'>('all')
-  const [scopeFilter, setScopeFilter]       = useState('')
-  const [search, setSearch]                 = useState('')
+  const [view, setView]                             = useState<View>('canvas')
+  const [categoryFilter, setCategoryFilter]         = useState<NodeCategory | 'all'>('all')
+  const [projectFilter, setProjectFilter]           = useState<string | null>(null)
+  const [conversationFilter, setConversationFilter] = useState<string | null>(null)
+  const [search, setSearch]                         = useState('')
   const [selectedIds, setSelectedIds]       = useState<Set<string>>(new Set())
   const [addOpen, setAddOpen]               = useState(false)
   const [aiOpen, setAiOpen]                 = useState(false)
@@ -68,32 +71,21 @@ export default function App() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const scopes = useMemo(() => {
-    const s = new Set(nodes.map(n => n.scope).filter(Boolean))
-    return [...s].sort()
-  }, [nodes])
-
   const filtered = useMemo(() => {
     let list = nodes
+    if (conversationFilter) list = list.filter(n => n.conversationId === conversationFilter)
+    else if (projectFilter) list = list.filter(n => n.projectId === projectFilter)
     if (categoryFilter !== 'all') list = list.filter(n => n.category === categoryFilter)
-    if (scopeFilter) list = list.filter(n => n.scope === scopeFilter)
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(n =>
         n.title.toLowerCase().includes(q) ||
         n.content.toLowerCase().includes(q) ||
-        n.tags.some(t => t.toLowerCase().includes(q)) ||
-        n.scope.toLowerCase().includes(q)
+        n.tags.some(t => t.toLowerCase().includes(q))
       )
     }
     return list
-  }, [nodes, categoryFilter, scopeFilter, search])
-
-  const counts = useMemo(() => {
-    const c = {} as Record<NodeCategory, number>
-    for (const n of nodes) c[n.category] = (c[n.category] ?? 0) + 1
-    return c
-  }, [nodes])
+  }, [nodes, categoryFilter, projectFilter, conversationFilter, search])
 
   const activeCount   = useMemo(() => nodes.filter(n => n.active).length, [nodes])
   const selectedNodes = useMemo(() => nodes.filter(n => selectedIds.has(n.id)), [nodes, selectedIds])
@@ -140,14 +132,18 @@ export default function App() {
 
         {/* ── Sidebar ─────────────────────────────────── */}
         <Sidebar
-          counts={counts}
-          total={nodes.length}
+          nodes={nodes}
           activeCount={activeCount}
           categoryFilter={categoryFilter}
-          scopeFilter={scopeFilter}
-          scopes={scopes}
+          projectFilter={projectFilter}
+          conversationFilter={conversationFilter}
+          projects={projects}
+          conversations={conversations}
           onCategoryFilter={f => { setCategoryFilter(f); setSelectedIds(new Set()) }}
-          onScopeFilter={s => { setScopeFilter(s); setSelectedIds(new Set()) }}
+          onProjectFilter={id => { setProjectFilter(id); setConversationFilter(null); setSelectedIds(new Set()) }}
+          onConversationFilter={id => { setConversationFilter(id); setSelectedIds(new Set()) }}
+          onAddProject={name => addProject(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`)}
+          onAddConversation={(projectId, title) => addConversation(projectId, title)}
         />
 
         {/* ── Main column ─────────────────────────────── */}
@@ -320,7 +316,7 @@ export default function App() {
           <DialogContent>
             <p className="text-sm font-semibold t-text mb-1">Add node</p>
             <NodeForm
-              onSubmit={data => { addNode(data); setAddOpen(false) }}
+              onSubmit={data => { addNode(data, projectFilter ?? undefined, conversationFilter ?? undefined); setAddOpen(false) }}
               onCancel={() => setAddOpen(false)}
             />
           </DialogContent>

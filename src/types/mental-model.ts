@@ -2,6 +2,21 @@ export type NodeCategory = 'project' | 'conversation' | 'fact' | 'preference' | 
 export type ConfidenceLevel = 'high' | 'medium' | 'low'
 export type MemoryType = 'episodic' | 'semantic'
 
+export interface Project {
+  id: string
+  name: string
+  color: string
+  createdAt: string
+}
+
+export interface Conversation {
+  id: string
+  projectId: string
+  title: string
+  source?: string
+  createdAt: string
+}
+
 export interface MentalModelNode {
   id: string
   category: NodeCategory
@@ -25,6 +40,9 @@ export interface MentalModelNode {
   importance: number
   // Canvas spatial layout
   position?: { x: number; y: number }
+  // Project/conversation hierarchy
+  projectId?: string
+  conversationId?: string
 }
 
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {
