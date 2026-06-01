@@ -1,10 +1,13 @@
 import { useRef, useState, useMemo, useEffect, useCallback } from 'react'
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize2, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CanvasLinks } from './CanvasLinks'
 import { CanvasNode } from './CanvasNode'
+import { CanvasArea } from './CanvasArea'
 import { computeDefaultPositions, CARD_W, CARD_H } from './layout'
-import type { MentalModelNode } from '@/types/mental-model'
+import type { MentalModelNode, Project, Conversation } from '@/types/mental-model'
+
+const AREA_PAD = 52
 
 interface Props {
   nodes: MentalModelNode[]
@@ -15,6 +18,10 @@ interface Props {
   onTogglePin: (id: string) => void
   onSetPosition: (id: string, x: number, y: number) => void
   onEditRequest: (id: string) => void
+  projects?: Project[]
+  conversations?: Conversation[]
+  projectFilter?: string | null
+  conversationFilter?: string | null
 }
 
 interface DragState {
@@ -33,10 +40,12 @@ export function Canvas({
   nodes, selectedIds,
   onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onSetPosition, onEditRequest,
+  projects, conversations, projectFilter, conversationFilter,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pan, setPan] = useState({ x: 60, y: 60 })
   const [scale, setScale] = useState(1)
+  const [showAreas, setShowAreas] = useState(true)
 
   const dragRef = useRef<DragState | null>(null)
   const panRef  = useRef<PanState | null>(null)
@@ -155,6 +164,40 @@ export function Canvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [positions, dragRef.current])
 
+  const areas = useMemo(() => {
+    if (!showAreas || !projects?.length) return []
+    if (conversationFilter) return []
+
+    function boundsFor(ids: string[]) {
+      const poses = ids.map(id => livePositions[id]).filter(Boolean) as { x: number; y: number }[]
+      if (!poses.length) return null
+      const minX = Math.min(...poses.map(p => p.x)) - AREA_PAD
+      const minY = Math.min(...poses.map(p => p.y)) - AREA_PAD
+      const maxX = Math.max(...poses.map(p => p.x)) + CARD_W + AREA_PAD
+      const maxY = Math.max(...poses.map(p => p.y)) + CARD_H + AREA_PAD
+      return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+    }
+
+    if (projectFilter) {
+      const proj = projects.find(p => p.id === projectFilter)
+      if (!proj) return []
+      const projConvs = conversations?.filter(c => c.projectId === projectFilter) ?? []
+      return projConvs.flatMap(conv => {
+        const ids = nodes.filter(n => n.conversationIds.includes(conv.id)).map(n => n.id)
+        const bounds = boundsFor(ids)
+        if (!bounds) return []
+        return [{ id: conv.id, label: conv.title, color: proj.color, nodeCount: ids.length, bounds, isConversation: true as const }]
+      })
+    }
+
+    return projects.flatMap(proj => {
+      const ids = nodes.filter(n => n.projectId === proj.id).map(n => n.id)
+      const bounds = boundsFor(ids)
+      if (!bounds) return []
+      return [{ id: proj.id, label: proj.name, color: proj.color, nodeCount: ids.length, bounds, isConversation: false as const }]
+    })
+  }, [showAreas, projects, conversations, projectFilter, conversationFilter, nodes, livePositions])
+
   return (
     <div
       ref={containerRef}
@@ -170,6 +213,7 @@ export function Canvas({
         className="absolute"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: '0 0' }}
       >
+        {areas.map(a => <CanvasArea key={a.id} {...a} />)}
         <CanvasLinks nodes={nodes} positions={livePositions} />
         {nodes.map(node => (
           <CanvasNode
@@ -197,6 +241,12 @@ export function Canvas({
         <Button size="icon" variant="secondary" className="h-7 w-7" onClick={fitAll} title="Fit all">
           <Maximize2 className="h-3.5 w-3.5" />
         </Button>
+        {projects?.length ? (
+          <Button size="icon" variant={showAreas ? 'secondary' : 'ghost'} className="h-7 w-7"
+            onClick={() => setShowAreas(v => !v)} title={showAreas ? 'Hide areas' : 'Show areas'}>
+            <Layers className="h-3.5 w-3.5" />
+          </Button>
+        ) : null}
       </div>
 
       <div className="absolute bottom-4 left-4 text-[10px] t-muted">

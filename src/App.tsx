@@ -322,6 +322,10 @@ export default function App() {
                     onTogglePin={togglePin}
                     onSetPosition={setPosition}
                     onEditRequest={id => setInspectorId(id)}
+                    projects={projects}
+                    conversations={conversations}
+                    projectFilter={projectFilter}
+                    conversationFilter={conversationFilter}
                   />
                 </div>
               )}
