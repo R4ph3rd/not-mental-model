@@ -23,13 +23,22 @@ interface Props {
   groups?: MemoryGroup[]
   projectFilter?: string | null
   conversationFilter?: string | null
+  onUpdateProject?: (id: string, data: { name?: string; color?: string }) => void
 }
 
-interface DragState {
+interface NodeDragState {
   type: 'node'; id: string
   startMouseX: number; startMouseY: number
   startNodeX: number; startNodeY: number
   x: number; y: number; hasMoved: boolean
+}
+
+interface AreaDragState {
+  type: 'area'
+  nodeIds: string[]
+  startMouseX: number; startMouseY: number
+  startPositions: Record<string, { x: number; y: number }>
+  dx: number; dy: number
 }
 
 interface PanState {
@@ -42,14 +51,16 @@ export function Canvas({
   onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onSetPosition, onEditRequest,
   projects, conversations, groups, projectFilter, conversationFilter,
+  onUpdateProject,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pan, setPan] = useState({ x: 60, y: 60 })
   const [scale, setScale] = useState(1)
   const [showAreas, setShowAreas] = useState(true)
 
-  const dragRef = useRef<DragState | null>(null)
-  const panRef  = useRef<PanState | null>(null)
+  const dragRef     = useRef<NodeDragState | null>(null)
+  const areaDragRef = useRef<AreaDragState | null>(null)
+  const panRef      = useRef<PanState | null>(null)
   const [, forceUpdate] = useState(0)
 
   const defaultPositions = useMemo(() => computeDefaultPositions(nodes), [nodes])
@@ -80,6 +91,20 @@ export function Canvas({
     }
   }
 
+  function handleAreaDragStart(e: React.MouseEvent, nodeIds: string[]) {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    const startPositions: Record<string, { x: number; y: number }> = {}
+    for (const id of nodeIds) {
+      startPositions[id] = positions[id] ?? { x: 0, y: 0 }
+    }
+    areaDragRef.current = {
+      type: 'area', nodeIds,
+      startMouseX: e.clientX, startMouseY: e.clientY,
+      startPositions, dx: 0, dy: 0,
+    }
+  }
+
   function handleCanvasMouseDown(e: React.MouseEvent) {
     if (e.button !== 0) return
     panRef.current = {
@@ -97,6 +122,15 @@ export function Canvas({
       dragRef.current = {
         ...d, x: d.startNodeX + dx, y: d.startNodeY + dy,
         hasMoved: d.hasMoved || Math.abs(dx) > 4 || Math.abs(dy) > 4,
+      }
+      needsUpdate = true
+    }
+    if (areaDragRef.current) {
+      const a = areaDragRef.current
+      areaDragRef.current = {
+        ...a,
+        dx: (e.clientX - a.startMouseX) / scale,
+        dy: (e.clientY - a.startMouseY) / scale,
       }
       needsUpdate = true
     }
@@ -118,6 +152,14 @@ export function Canvas({
         onSetPosition(d.id, d.x, d.y)
       }
       dragRef.current = null
+    }
+    if (areaDragRef.current) {
+      const a = areaDragRef.current
+      for (const id of a.nodeIds) {
+        const base = a.startPositions[id]
+        onSetPosition(id, base.x + a.dx, base.y + a.dy)
+      }
+      areaDragRef.current = null
     }
     panRef.current = null
   }, [onToggleSelect, onSetPosition, onEditRequest])
@@ -160,10 +202,20 @@ export function Canvas({
 
   const livePositions = useMemo(() => {
     const d = dragRef.current
-    if (!d) return positions
-    return { ...positions, [d.id]: { x: d.x, y: d.y } }
+    const a = areaDragRef.current
+    let result = positions
+    if (d) result = { ...result, [d.id]: { x: d.x, y: d.y } }
+    if (a) {
+      const overrides: Record<string, { x: number; y: number }> = {}
+      for (const id of a.nodeIds) {
+        const base = a.startPositions[id]
+        overrides[id] = { x: base.x + a.dx, y: base.y + a.dy }
+      }
+      result = { ...result, ...overrides }
+    }
+    return result
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positions, dragRef.current])
+  }, [positions, dragRef.current, areaDragRef.current])
 
   const areas = useMemo(() => {
     if (!showAreas || !projects?.length) return []
@@ -187,7 +239,7 @@ export function Canvas({
         const ids = nodes.filter(n => n.conversationIds.includes(conv.id)).map(n => n.id)
         const bounds = boundsFor(ids)
         if (!bounds) return []
-        return [{ id: conv.id, label: conv.title, color: proj.color, nodeCount: ids.length, bounds, isConversation: true as const }]
+        return [{ id: conv.id, label: conv.title, color: proj.color, nodeCount: ids.length, bounds, isConversation: true as const, memberIds: ids }]
       })
     }
 
@@ -195,7 +247,7 @@ export function Canvas({
       const ids = nodes.filter(n => n.projectId === proj.id).map(n => n.id)
       const bounds = boundsFor(ids)
       if (!bounds) return []
-      return [{ id: proj.id, label: proj.name, color: proj.color, nodeCount: ids.length, bounds, isConversation: false as const }]
+      return [{ id: proj.id, label: proj.name, color: proj.color, nodeCount: ids.length, bounds, isConversation: false as const, memberIds: ids }]
     })
   }, [showAreas, projects, conversations, projectFilter, conversationFilter, nodes, livePositions])
 
@@ -214,7 +266,18 @@ export function Canvas({
         className="absolute"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: '0 0' }}
       >
-        {areas.map(a => <CanvasArea key={a.id} {...a} />)}
+        {areas.map(a => (
+          <CanvasArea
+            key={a.id}
+            label={a.label}
+            color={a.color}
+            nodeCount={a.nodeCount}
+            bounds={a.bounds}
+            isConversation={a.isConversation}
+            onDragStart={e => handleAreaDragStart(e, a.memberIds)}
+            onRename={!a.isConversation ? name => onUpdateProject?.(a.id, { name }) : undefined}
+          />
+        ))}
         <CanvasLinks nodes={nodes} positions={livePositions} />
         {nodes.map(node => {
           const groupColor =

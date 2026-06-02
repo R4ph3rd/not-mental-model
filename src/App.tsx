@@ -330,6 +330,7 @@ export default function App() {
                     groups={groups}
                     projectFilter={projectFilter}
                     conversationFilter={conversationFilter}
+                    onUpdateProject={updateProject}
                   />
                 </div>
               )}
