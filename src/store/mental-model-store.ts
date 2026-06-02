@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type {
   MentalModelNode, NodeCategory, ConfidenceLevel, MemoryType,
   Project, Conversation, MemoryGroup, Provenance,
 } from '@/types/mental-model'
+import { getMem0Config, mem0AddMemory, mem0Update, mem0Delete } from '@/lib/mem0'
 
 const NODES_KEY    = 'mental-model-nodes'
 const PROJECTS_KEY = 'mm-projects'
@@ -309,6 +310,10 @@ export function useMentalModelStore() {
   const [conversations, setConversations]   = useState<Conversation[]>(loadConversations)
   const [groups, setGroups]                 = useState<MemoryGroup[]>(loadGroups)
 
+  // Always-current snapshot used inside fire-and-forget async closures
+  const nodesRef = useRef<MentalModelNode[]>(nodes)
+  nodesRef.current = nodes
+
   // ── Nodes ────────────────────────────────────────────────────────
 
   const mutateNodes = useCallback((fn: (prev: MentalModelNode[]) => MentalModelNode[]) => {
@@ -334,18 +339,57 @@ export function useMentalModelStore() {
       conversationIds: conversationIds ?? [],
     }
     mutateNodes(prev => [node, ...prev])
+    // Fire-and-forget mem0 sync (non-sensitive nodes only)
+    if (!node.sensitive) {
+      void (async () => {
+        const cfg = getMem0Config()
+        if (!cfg) return
+        try {
+          const mem0Id = await mem0AddMemory(
+            cfg.apiKey, cfg.userId,
+            `${node.title}: ${node.content}`,
+            { nodeId: node.id, category: node.category, confidence: node.confidence },
+          )
+          if (mem0Id) {
+            mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0Id } : n))
+          }
+        } catch { /* non-fatal — local store is source of truth */ }
+      })()
+    }
     return node
   }, [mutateNodes])
 
   const updateNode = useCallback((id: string, data: Partial<NodeFormData> & { conversationIds?: string[] }) => {
     mutateNodes(prev => prev.map(n => n.id === id ? { ...n, ...data, updatedAt: now() } : n))
+    // Sync title/content changes to mem0
+    if (data.title !== undefined || data.content !== undefined) {
+      const node = nodesRef.current.find(n => n.id === id)
+      if (node?.mem0Id && !node.sensitive) {
+        const updated = { ...node, ...data }
+        void (async () => {
+          const cfg = getMem0Config()
+          if (!cfg) return
+          try {
+            await mem0Update(cfg.apiKey, node.mem0Id!, `${updated.title}: ${updated.content}`)
+          } catch { /* non-fatal */ }
+        })()
+      }
+    }
   }, [mutateNodes])
 
   const deleteNode = useCallback((id: string) => {
+    const node = nodesRef.current.find(n => n.id === id)
     mutateNodes(prev => prev
       .filter(n => n.id !== id)
       .map(n => ({ ...n, linkedIds: n.linkedIds.filter(lid => lid !== id) }))
     )
+    if (node?.mem0Id) {
+      void (async () => {
+        const cfg = getMem0Config()
+        if (!cfg) return
+        try { await mem0Delete(cfg.apiKey, node.mem0Id!) } catch { /* non-fatal */ }
+      })()
+    }
   }, [mutateNodes])
 
   const toggleActive = useCallback((id: string) => {

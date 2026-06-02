@@ -62,6 +62,8 @@ export interface MentalModelNode {
   confirmed: boolean
   // Governance paper: exclude from copy-context and chat context
   sensitive: boolean
+  // mem0 cloud memory ID — set after successful sync, used for updates/deletes
+  mem0Id?: string
 }
 
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {
