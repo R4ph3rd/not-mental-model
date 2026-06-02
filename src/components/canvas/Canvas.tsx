@@ -26,6 +26,8 @@ interface Props {
   onUpdateProject?: (id: string, data: { name?: string; color?: string }) => void
   focusNodeId?: string | null
   onFocusConsumed?: () => void
+  focusGroupId?: string | null
+  onFocusGroupConsumed?: () => void
 }
 
 interface NodeDragState {
@@ -53,7 +55,7 @@ export function Canvas({
   onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onSetPosition, onEditRequest,
   projects, conversations, groups, projectFilter, conversationFilter,
-  onUpdateProject, focusNodeId, onFocusConsumed,
+  onUpdateProject, focusNodeId, onFocusConsumed, focusGroupId, onFocusGroupConsumed,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pan, setPan] = useState({ x: 60, y: 60 })
@@ -215,6 +217,30 @@ export function Canvas({
     setScale(targetScale)
     onFocusConsumed?.()
   }, [focusNodeId])
+
+  useEffect(() => {
+    if (!focusGroupId || !containerRef.current) return
+    const memberIds = nodes
+      .filter(n => n.groupIds.includes(focusGroupId) || n.projectId === focusGroupId)
+      .map(n => n.id)
+    if (!memberIds.length) return
+    const poses = memberIds.map(id => positions[id]).filter(Boolean) as { x: number; y: number }[]
+    if (!poses.length) return
+    const rect   = containerRef.current.getBoundingClientRect()
+    const minX   = Math.min(...poses.map(p => p.x))
+    const minY   = Math.min(...poses.map(p => p.y))
+    const maxX   = Math.max(...poses.map(p => p.x)) + CARD_W
+    const maxY   = Math.max(...poses.map(p => p.y)) + CARD_H
+    const pad    = 60
+    const newScale = Math.min(
+      (rect.width  - pad * 2) / Math.max(maxX - minX, 1),
+      (rect.height - pad * 2) / Math.max(maxY - minY, 1),
+      1.5,
+    )
+    setPan({ x: pad - minX * newScale, y: pad - minY * newScale })
+    setScale(newScale)
+    onFocusGroupConsumed?.()
+  }, [focusGroupId])
 
   const livePositions = useMemo(() => {
     const d = dragRef.current

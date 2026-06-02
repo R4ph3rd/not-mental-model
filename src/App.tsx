@@ -54,7 +54,8 @@ export default function App() {
   const [copied, setCopied] = useState(false)
   const [inferMode, setInferMode] = useState<InferenceMode | null>(null)
   const [inferSourceNodes, setInferSourceNodes] = useState<typeof nodes | null>(null)
-  const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null)
+  const [canvasFocusId, setCanvasFocusId]           = useState<string | null>(null)
+  const [canvasFocusGroupId, setCanvasFocusGroupId] = useState<string | null>(null)
 
   function openInfer(mode: InferenceMode, src?: typeof nodes) {
     setInferMode(mode)
@@ -64,6 +65,11 @@ export default function App() {
   function handleFocusNode(id: string) {
     setView('canvas')
     setCanvasFocusId(id)
+  }
+
+  function handleFocusGroup(id: string) {
+    setView('canvas')
+    setCanvasFocusGroupId(id)
   }
 
   function handleSidebarAddNode(ctx: { projectId?: string; conversationId?: string; groupId?: string }) {
@@ -246,8 +252,10 @@ export default function App() {
           onToggleGroupActive={toggleGroupActive}
           onUpdateProject={updateProject}
           onUpdateGroup={updateGroup}
+          selectedNodeIds={selectedIds}
           onAddNode={handleSidebarAddNode}
           onFocusNode={handleFocusNode}
+          onFocusGroup={handleFocusGroup}
           onEditNode={id => setInspectorId(id)}
           onDeleteNode={id => { deleteNode(id); setSelectedIds(p => { const n = new Set(p); n.delete(id); return n }) }}
           onDuplicateNode={handleDuplicateNode}
@@ -370,6 +378,8 @@ export default function App() {
                     onUpdateProject={updateProject}
                     focusNodeId={canvasFocusId}
                     onFocusConsumed={() => setCanvasFocusId(null)}
+                    focusGroupId={canvasFocusGroupId}
+                    onFocusGroupConsumed={() => setCanvasFocusGroupId(null)}
                   />
                 </div>
               )}
