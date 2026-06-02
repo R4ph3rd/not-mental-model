@@ -24,6 +24,8 @@ interface Props {
   projectFilter?: string | null
   conversationFilter?: string | null
   onUpdateProject?: (id: string, data: { name?: string; color?: string }) => void
+  focusNodeId?: string | null
+  onFocusConsumed?: () => void
 }
 
 interface NodeDragState {
@@ -51,7 +53,7 @@ export function Canvas({
   onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onSetPosition, onEditRequest,
   projects, conversations, groups, projectFilter, conversationFilter,
-  onUpdateProject,
+  onUpdateProject, focusNodeId, onFocusConsumed,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pan, setPan] = useState({ x: 60, y: 60 })
@@ -199,6 +201,20 @@ export function Canvas({
     setPan({ x: pad - minX * newScale, y: pad - minY * newScale })
     setScale(newScale)
   }
+
+  useEffect(() => {
+    if (!focusNodeId || !containerRef.current) return
+    const pos = positions[focusNodeId]
+    if (!pos) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const targetScale = Math.max(scale, 0.9)
+    setPan({
+      x: rect.width  / 2 - (pos.x + CARD_W / 2) * targetScale,
+      y: rect.height / 2 - (pos.y + CARD_H / 2) * targetScale,
+    })
+    setScale(targetScale)
+    onFocusConsumed?.()
+  }, [focusNodeId])
 
   const livePositions = useMemo(() => {
     const d = dragRef.current

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Brain, MessageSquare, Lightbulb, Heart, Target, Zap,
   Eye, EyeOff, ChevronDown, ChevronRight, Folder, X,
-  FolderPlus, MessageSquarePlus,
+  FolderPlus, MessageSquarePlus, CirclePlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ColorPicker } from '@/components/ColorPicker'
@@ -17,6 +17,15 @@ const CATEGORY_ICONS: Record<NodeCategory | 'all', React.ReactNode> = {
   preference:   <Heart className="h-3.5 w-3.5" />,
   goal:         <Target className="h-3.5 w-3.5" />,
   skill:        <Zap className="h-3.5 w-3.5" />,
+}
+
+const CATEGORY_DOT: Record<NodeCategory, string> = {
+  project:      '#60a5fa',
+  conversation: '#a78bfa',
+  fact:         '#4ade80',
+  preference:   '#fb923c',
+  goal:         '#f472b6',
+  skill:        '#22d3ee',
 }
 
 function InlineInput({ placeholder, onSubmit, onCancel }: {
@@ -38,7 +47,6 @@ function InlineInput({ placeholder, onSubmit, onCancel }: {
   )
 }
 
-
 interface Props {
   nodes: MentalModelNode[]
   activeCount: number
@@ -53,12 +61,15 @@ interface Props {
   onProjectFilter: (id: string | null) => void
   onConversationFilter: (id: string | null) => void
   onGroupFilter: (id: string | null) => void
-  onAddProject: (name: string) => void
+  onAddProject: (name: string) => Project
   onAddConversation: (projectId: string, title: string) => void
   onAddGroup: (name: string, parentId?: string) => void
   onToggleGroupActive: (id: string) => void
   onUpdateProject: (id: string, data: { name?: string; color?: string }) => void
   onUpdateGroup: (id: string, data: { name?: string; color?: string }) => void
+  onAddNode: (ctx: { projectId?: string; conversationId?: string; groupId?: string }) => void
+  onFocusNode: (id: string) => void
+  onDeleteNode: (id: string) => void
 }
 
 export function Sidebar({
@@ -68,43 +79,60 @@ export function Sidebar({
   onCategoryFilter, onProjectFilter, onConversationFilter, onGroupFilter,
   onAddProject, onAddConversation, onAddGroup, onToggleGroupActive,
   onUpdateProject, onUpdateGroup,
+  onAddNode, onFocusNode, onDeleteNode,
 }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(projects.map(p => p.id)))
-  const [addingConvIn, setAddingConvIn] = useState<string | null>(null)
-  const [addingGroupIn, setAddingGroupIn] = useState<string | null>(null)  // parentId or 'root'
+  const [addingConvIn, setAddingConvIn]     = useState<string | null>(null)
+  const [addingGroupIn, setAddingGroupIn]   = useState<string | null>(null)
   const [addingRootProject, setAddingRootProject] = useState(false)
-  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renamingId, setRenamingId]         = useState<string | null>(null)
   const [workspaceExpanded, setWorkspaceExpanded] = useState(true)
 
   function toggleExpanded(id: string) {
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
 
-  const total = nodes.length
-  const noFilter = !projectFilter && !conversationFilter && !groupFilter
-  const countByProject = (pid: string) => nodes.filter(n => n.projectId === pid).length
-  const countByConv = (cid: string) => nodes.filter(n => n.conversationIds.includes(cid)).length
-  const countByGroup = (gid: string) => nodes.filter(n => n.groupIds.includes(gid)).length
+  const total      = nodes.length
+  const noFilter   = !projectFilter && !conversationFilter && !groupFilter
+  const rootGroups = groups.filter(g => !g.parentId)
+  const subGroups  = (pid: string) => groups.filter(g => g.parentId === pid)
+
   const categoryCounts = {} as Record<NodeCategory, number>
   for (const n of nodes) categoryCounts[n.category] = (categoryCounts[n.category] ?? 0) + 1
 
-  // Root-level groups: MemoryGroups without a parentId that references a project
-  const rootGroups = groups.filter(g => !g.parentId)
-  // Sub-groups of a given parent
-  const subGroups = (parentId: string) => groups.filter(g => g.parentId === parentId)
-
   function renameProject(id: string, name: string) { onUpdateProject(id, { name }); setRenamingId(null) }
-  function renameGroup(id: string, name: string) { onUpdateGroup(id, { name }); setRenamingId(null) }
+  function renameGroup(id: string, name: string)   { onUpdateGroup(id, { name });   setRenamingId(null) }
 
-  // Merge projects + root groups sorted by createdAt for unified tree
-  type WorkspaceItem = { kind: 'project'; data: Project } | { kind: 'group'; data: MemoryGroup }
-  const workspaceItems: WorkspaceItem[] = [
-    ...projects.map(p => ({ kind: 'project' as const, data: p })),
-    ...rootGroups.map(g => ({ kind: 'group' as const, data: g })),
+  // unified sorted list of projects + root groups
+  type WItem = { kind: 'project'; data: Project } | { kind: 'group'; data: MemoryGroup }
+  const workspaceItems: WItem[] = [
+    ...projects.map(p  => ({ kind: 'project' as const, data: p })),
+    ...rootGroups.map(g => ({ kind: 'group'   as const, data: g })),
   ].sort((a, b) => a.data.createdAt.localeCompare(b.data.createdAt))
 
+  // root nodes — no project and no groups
+  const rootNodes = nodes.filter(n => !n.projectId && n.groupIds.length === 0)
+
+  // node rows — compact display inside the tree
+  function NodeRow({ node }: { node: MentalModelNode }) {
+    return (
+      <div className="group/node flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] t-muted hover:t-text hover:t-card transition-colors cursor-pointer"
+        onClick={() => onFocusNode(node.id)}
+      >
+        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_DOT[node.category] }} />
+        <span className="flex-1 truncate">{node.title}</span>
+        <button className="hidden group-hover/node:flex t-muted hover:text-red-400 transition-colors shrink-0"
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onDeleteNode(node.id) }}
+          title="Delete">
+          <X className="h-2.5 w-2.5" />
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <aside className="w-52 shrink-0 border-r t-border t-sidebar flex flex-col py-3 overflow-y-auto">
+    <aside className="w-56 shrink-0 border-r t-border t-sidebar flex flex-col py-3 overflow-y-auto">
 
       {/* Context counter */}
       <div className="mx-2 mb-3 px-3 py-2 rounded-lg border t-border t-card">
@@ -127,27 +155,46 @@ export function Sidebar({
       </button>
 
       {/* ── Knowledge workspace ──────────────────────────────────── */}
-      <div className="mt-3 mb-1 px-3 flex items-center gap-1">
+      <div className="mt-3 mb-1 px-3 flex items-center gap-1 group/ws">
         <button onClick={() => setWorkspaceExpanded(v => !v)}
           className="flex items-center gap-1 t-muted hover:t-text transition-colors flex-1 min-w-0">
           {workspaceExpanded ? <ChevronDown className="h-2.5 w-2.5 shrink-0" /> : <ChevronRight className="h-2.5 w-2.5 shrink-0" />}
           <p className="text-[10px] uppercase tracking-widest truncate">Knowledge workspace</p>
         </button>
-        {/* Root-level action buttons */}
-        <button onClick={() => setAddingRootProject(true)} className="t-muted hover:t-accent transition-colors" title="New group">
-          <FolderPlus className="h-3 w-3" />
-        </button>
+        {/* Root action buttons — always visible on header */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button onClick={() => onAddNode({})} className="t-muted hover:t-accent transition-colors" title="New node">
+            <CirclePlus className="h-3 w-3" />
+          </button>
+          <button onClick={() => {
+            const proj = onAddProject('New project')
+            setExpanded(prev => new Set([...prev, proj.id]))
+            setAddingConvIn(proj.id)
+          }} className="t-muted hover:t-accent transition-colors" title="New conversation">
+            <MessageSquarePlus className="h-3 w-3" />
+          </button>
+          <button onClick={() => setAddingRootProject(true)} className="t-muted hover:t-accent transition-colors" title="New group">
+            <FolderPlus className="h-3 w-3" />
+          </button>
+        </div>
       </div>
 
       {workspaceExpanded && (
         <>
           {workspaceItems.map(item => {
             if (item.kind === 'project') {
-              const project = item.data
-              const convs = conversations.filter(c => c.projectId === project.id)
-              const subs = subGroups(project.id)
-              const isOpen = expanded.has(project.id)
+              const project  = item.data
+              const convs    = conversations.filter(c => c.projectId === project.id)
+              const subs     = subGroups(project.id)
+              const isOpen   = expanded.has(project.id)
               const isActive = projectFilter === project.id && !conversationFilter
+
+              // nodes directly in the project (not in any of the project's conversations)
+              const projectConvIds = new Set(convs.map(c => c.id))
+              const directNodes    = nodes.filter(n =>
+                n.projectId === project.id &&
+                !n.conversationIds.some(cid => projectConvIds.has(cid))
+              )
 
               return (
                 <div key={project.id}>
@@ -171,15 +218,22 @@ export function Sidebar({
                         onDoubleClick={e => { e.stopPropagation(); setRenamingId(project.id) }}
                         className="flex items-center gap-1 flex-1 min-w-0 text-left">
                         <span className={cn('flex-1 truncate font-medium', isActive ? 't-accent' : 't-text')}>{project.name}</span>
-                        <span className={cn('tabular-nums text-[10px] shrink-0', isActive ? 't-accent' : 't-muted')}>{countByProject(project.id)}</span>
                       </button>
                     )}
-                    {/* Hover actions */}
+                    {/* Hover: show action icons, hide count */}
+                    <span className={cn('tabular-nums text-[10px] shrink-0 group-hover:hidden', isActive ? 't-accent' : 't-muted')}>
+                      {nodes.filter(n => n.projectId === project.id).length}
+                    </span>
                     <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                      <button onClick={() => setAddingConvIn(project.id)} className="t-muted hover:t-accent transition-colors" title="New conversation">
+                      <button onClick={() => onAddNode({ projectId: project.id })} className="t-muted hover:t-accent transition-colors" title="New node">
+                        <CirclePlus className="h-3 w-3" />
+                      </button>
+                      <button onClick={() => { setAddingConvIn(project.id); if (!isOpen) toggleExpanded(project.id) }}
+                        className="t-muted hover:t-accent transition-colors" title="New conversation">
                         <MessageSquarePlus className="h-3 w-3" />
                       </button>
-                      <button onClick={() => setAddingGroupIn(project.id)} className="t-muted hover:t-accent transition-colors" title="New sub-group">
+                      <button onClick={() => { setAddingGroupIn(project.id); if (!isOpen) toggleExpanded(project.id) }}
+                        className="t-muted hover:t-accent transition-colors" title="New sub-group">
                         <FolderPlus className="h-3 w-3" />
                       </button>
                     </div>
@@ -189,26 +243,38 @@ export function Sidebar({
                     <div className="ml-4 border-l t-border pl-2 pb-1 space-y-0.5">
                       {convs.map(conv => {
                         const isConvActive = conversationFilter === conv.id
+                        const convNodes    = nodes.filter(n =>
+                          n.projectId === project.id && n.conversationIds.includes(conv.id)
+                        )
                         return (
-                          <button key={conv.id}
-                            onClick={() => { onProjectFilter(project.id); onConversationFilter(conv.id); onGroupFilter(null) }}
-                            className={cn('flex items-center gap-1.5 w-full rounded-md px-2 py-1 text-left transition-colors group',
+                          <div key={conv.id}>
+                            <div className={cn('flex items-center gap-1.5 rounded-md text-left transition-colors group/conv',
                               isConvActive ? 't-accent-subtle' : 'hover:t-card')}>
-                            <MessageSquare className={cn('h-3 w-3 shrink-0', isConvActive ? 't-accent' : 't-muted')} />
-                            <span className={cn('flex-1 truncate text-[11px]', isConvActive ? 't-accent font-medium' : 't-muted group-hover:t-text')}>
-                              {conv.title}
-                            </span>
-                            <span className="text-[10px] t-muted tabular-nums shrink-0">{countByConv(conv.id)}</span>
-                          </button>
+                              <button
+                                onClick={() => { onProjectFilter(project.id); onConversationFilter(conv.id); onGroupFilter(null) }}
+                                className="flex items-center gap-1.5 flex-1 min-w-0 px-2 py-1">
+                                <MessageSquare className={cn('h-3 w-3 shrink-0', isConvActive ? 't-accent' : 't-muted')} />
+                                <span className={cn('flex-1 truncate text-[11px]', isConvActive ? 't-accent font-medium' : 't-muted group-hover/conv:t-text')}>
+                                  {conv.title}
+                                </span>
+                              </button>
+                              <span className="text-[10px] t-muted tabular-nums shrink-0 pr-1 group-hover/conv:hidden">{convNodes.length}</span>
+                              <button className="hidden group-hover/conv:flex t-muted hover:t-accent pr-1 transition-colors shrink-0" title="New node"
+                                onClick={() => onAddNode({ projectId: project.id, conversationId: conv.id })}>
+                                <CirclePlus className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                            {convNodes.map(n => <NodeRow key={n.id} node={n} />)}
+                          </div>
                         )
                       })}
 
-                      {/* Sub-groups of this project */}
+                      {/* Sub-groups */}
                       {subs.map(sub => {
                         const isSubFilter = groupFilter === sub.id
                         return (
                           <div key={sub.id}
-                            className={cn('flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] transition-colors group',
+                            className={cn('flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] transition-colors group/sub',
                               isSubFilter ? 't-accent-subtle' : 'hover:t-card')}>
                             <ColorPicker color={sub.color} onChange={c => onUpdateGroup(sub.id, { color: c })} />
                             {renamingId === sub.id ? (
@@ -224,16 +290,26 @@ export function Sidebar({
                               <button onClick={() => { onGroupFilter(isSubFilter ? null : sub.id); onProjectFilter(null); onConversationFilter(null) }}
                                 onDoubleClick={e => { e.stopPropagation(); setRenamingId(sub.id) }}
                                 className="flex items-center gap-1 flex-1 min-w-0 text-left">
-                                <span className={cn('flex-1 truncate', isSubFilter ? 't-accent font-medium' : 't-muted group-hover:t-text')}>{sub.name}</span>
-                                <span className="text-[10px] t-muted tabular-nums shrink-0">{countByGroup(sub.id)}</span>
+                                <span className={cn('flex-1 truncate', isSubFilter ? 't-accent font-medium' : 't-muted group-hover/sub:t-text')}>{sub.name}</span>
                               </button>
                             )}
-                            <button onClick={() => onToggleGroupActive(sub.id)} className={cn('h-4 w-4 flex items-center justify-center rounded shrink-0 transition-colors', sub.active ? 't-muted hover:t-text' : 'text-red-400')}>
-                              {sub.active ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
-                            </button>
+                            <span className="text-[10px] t-muted tabular-nums shrink-0 group-hover/sub:hidden">
+                              {nodes.filter(n => n.groupIds.includes(sub.id)).length}
+                            </span>
+                            <div className="hidden group-hover/sub:flex items-center gap-0.5 shrink-0">
+                              <button onClick={() => onAddNode({ groupId: sub.id })} className="t-muted hover:t-accent transition-colors" title="New node">
+                                <CirclePlus className="h-2.5 w-2.5" />
+                              </button>
+                              <button onClick={() => onToggleGroupActive(sub.id)} className={cn('transition-colors', sub.active ? 't-muted hover:t-text' : 'text-red-400')}>
+                                {sub.active ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
+                              </button>
+                            </div>
                           </div>
                         )
                       })}
+
+                      {/* Direct project nodes (not in any conversation) */}
+                      {directNodes.map(n => <NodeRow key={n.id} node={n} />)}
 
                       {addingConvIn === project.id && (
                         <InlineInput placeholder="Conversation title…"
@@ -251,22 +327,22 @@ export function Sidebar({
               )
             }
 
-            // kind === 'group' (root-level MemoryGroup without parentId)
-            const group = item.data
+            // Root MemoryGroup (no parentId)
+            const group       = item.data
             const isGroupFilter = groupFilter === group.id
-            const subs = subGroups(group.id)
-            const isOpen = expanded.has(group.id)
+            const subs        = subGroups(group.id)
+            const isOpen      = expanded.has(group.id)
+            const groupNodes  = nodes.filter(n => n.groupIds.includes(group.id) && !n.projectId)
 
             return (
               <div key={group.id}>
                 <div className={cn('mx-1 flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs w-[calc(100%-8px)] transition-colors group',
                   isGroupFilter ? 't-accent-subtle' : 'hover:t-card')}>
-                  {subs.length > 0 && (
+                  {(subs.length > 0 || groupNodes.length > 0) ? (
                     <button onClick={() => toggleExpanded(group.id)} className="t-muted hover:t-text shrink-0">
                       {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                     </button>
-                  )}
-                  {subs.length === 0 && <span className="w-3 shrink-0" />}
+                  ) : <span className="w-3 shrink-0" />}
                   <ColorPicker color={group.color} onChange={c => onUpdateGroup(group.id, { color: c })} />
                   {renamingId === group.id ? (
                     <input autoFocus defaultValue={group.name}
@@ -282,28 +358,34 @@ export function Sidebar({
                       onDoubleClick={e => { e.stopPropagation(); setRenamingId(group.id) }}
                       className="flex items-center gap-1 flex-1 min-w-0 text-left">
                       <span className={cn('flex-1 truncate', isGroupFilter ? 't-accent font-medium' : 't-muted group-hover:t-text')}>{group.name}</span>
-                      <span className="text-[10px] t-muted tabular-nums shrink-0">{countByGroup(group.id)}</span>
                     </button>
                   )}
+                  <span className={cn('tabular-nums text-[10px] shrink-0 group-hover:hidden', isGroupFilter ? 't-accent' : 't-muted')}>
+                    {groupNodes.length}
+                  </span>
                   <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                    <button onClick={() => setAddingGroupIn(group.id)} className="t-muted hover:t-accent transition-colors" title="New sub-group">
+                    <button onClick={() => onAddNode({ groupId: group.id })} className="t-muted hover:t-accent transition-colors" title="New node">
+                      <CirclePlus className="h-3 w-3" />
+                    </button>
+                    <button onClick={() => { setAddingGroupIn(group.id); if (!isOpen) toggleExpanded(group.id) }}
+                      className="t-muted hover:t-accent transition-colors" title="New sub-group">
                       <FolderPlus className="h-3 w-3" />
                     </button>
+                    <button onClick={() => onToggleGroupActive(group.id)} className={cn('transition-colors', group.active ? 't-muted hover:t-text' : 'text-red-400')}>
+                      {group.active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                    </button>
                   </div>
-                  <button onClick={() => onToggleGroupActive(group.id)} className={cn('h-4 w-4 flex items-center justify-center rounded shrink-0 transition-colors', group.active ? 't-muted hover:t-text' : 'text-red-400')}>
-                    {group.active ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
-                  </button>
                 </div>
 
-                {isOpen && subs.length > 0 && (
+                {isOpen && (subs.length > 0 || groupNodes.length > 0) && (
                   <div className="ml-4 border-l t-border pl-2 pb-1 space-y-0.5">
                     {subs.map(sub => (
                       <div key={sub.id} className="flex items-center gap-1.5 px-2 py-1 text-[11px] t-muted">
                         <ColorPicker color={sub.color} onChange={c => onUpdateGroup(sub.id, { color: c })} />
                         <span className="flex-1 truncate">{sub.name}</span>
-                        <span className="text-[10px] tabular-nums">{countByGroup(sub.id)}</span>
                       </div>
                     ))}
+                    {groupNodes.map(n => <NodeRow key={n.id} node={n} />)}
                     {addingGroupIn === group.id && (
                       <InlineInput placeholder="Sub-group name…"
                         onSubmit={n => { onAddGroup(n, group.id); setAddingGroupIn(null) }}
@@ -315,15 +397,13 @@ export function Sidebar({
             )
           })}
 
+          {/* Root nodes — no project and no groups */}
+          {rootNodes.map(n => <NodeRow key={n.id} node={n} />)}
+
           {addingRootProject && (
             <InlineInput placeholder="Group name…"
               onSubmit={n => { onAddProject(n); setAddingRootProject(false) }}
               onCancel={() => setAddingRootProject(false)} />
-          )}
-          {addingGroupIn === 'root' && (
-            <InlineInput placeholder="Group name…"
-              onSubmit={n => { onAddGroup(n); setAddingGroupIn(null) }}
-              onCancel={() => setAddingGroupIn(null)} />
           )}
         </>
       )}
@@ -333,7 +413,7 @@ export function Sidebar({
         <p className="text-[10px] uppercase tracking-widest t-muted">Filter by type</p>
       </div>
       {(['all', 'project', 'conversation', 'fact', 'preference', 'goal', 'skill'] as const).map(f => {
-        const count = f === 'all' ? total : categoryCounts[f] ?? 0
+        const count  = f === 'all' ? total : categoryCounts[f] ?? 0
         const active = categoryFilter === f
         return (
           <button key={f} onClick={() => onCategoryFilter(f)}

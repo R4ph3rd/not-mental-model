@@ -29,11 +29,7 @@ const DEMO_CONVS: Conversation[] = [
   { id: 'dc-rust',    projectId: 'dp-learning', title: 'Rust: ownership + lifetimes walkthrough', source: 'claude.ai', createdAt: daysAgo(7)  },
 ]
 
-const DEMO_GROUPS: MemoryGroup[] = [
-  { id: 'dg-work',     name: 'Work context',     color: 'hsl(235 70% 62%)', active: true, createdAt: daysAgo(80) },
-  { id: 'dg-creative', name: 'Creative projects', color: 'hsl(285 70% 62%)', active: true, createdAt: daysAgo(60) },
-  { id: 'dg-personal', name: 'Daily life',        color: 'hsl(35 70% 60%)',  active: true, createdAt: daysAgo(50) },
-]
+const DEMO_GROUPS: MemoryGroup[] = []
 
 function defaultNodes(): MentalModelNode[] {
   return [
@@ -45,7 +41,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(60), updatedAt: daysAgo(5), linkedIds: ['dn-proj-ds'],
       active: true, pinned: true, memoryType: 'semantic', scope: 'Skills', importance: 0.95,
       projectId: 'dp-work', conversationIds: ['dc-ds'],
-      groupIds: ['dg-work'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-skill-react', category: 'skill', title: 'React + TypeScript — proficient',
@@ -54,7 +50,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(80), updatedAt: daysAgo(10), linkedIds: [],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Skills', importance: 0.9,
       projectId: 'dp-work', conversationIds: [],
-      groupIds: ['dg-work'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-skill-framer', category: 'skill', title: 'Framer Motion — intermediate',
@@ -63,7 +59,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(45), updatedAt: daysAgo(30), linkedIds: [],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Skills', importance: 0.6,
       projectId: 'dp-work', conversationIds: [],
-      groupIds: ['dg-work', 'dg-creative'], provenance: 'extracted', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'extracted', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-skill-rust', category: 'skill', title: 'Rust — beginner',
@@ -83,7 +79,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(50), updatedAt: daysAgo(4), linkedIds: ['dn-skill-figma'],
       active: true, pinned: true, memoryType: 'semantic', scope: 'Personal', importance: 0.95,
       projectId: 'dp-work', conversationIds: ['dc-ds'],
-      groupIds: ['dg-work', 'dg-creative'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-pref-darkmode', category: 'preference', title: 'Dark mode always',
@@ -92,7 +88,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(90), updatedAt: daysAgo(90), linkedIds: [],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Personal', importance: 0.85,
       projectId: undefined, conversationIds: [],
-      groupIds: ['dg-personal'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-pref-nomeetings', category: 'preference', title: 'No meetings before 10am',
@@ -101,7 +97,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(40), updatedAt: daysAgo(17), linkedIds: [],
       active: true, pinned: true, memoryType: 'semantic', scope: 'Work', importance: 0.9,
       projectId: 'dp-work', conversationIds: ['dc-sprint'],
-      groupIds: ['dg-work'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-pref-espresso', category: 'preference', title: 'Espresso, not drip coffee',
@@ -110,7 +106,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(22), updatedAt: daysAgo(22), linkedIds: ['dn-fact-morning'],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Personal', importance: 0.6,
       projectId: 'dp-personal', conversationIds: ['dc-morning'],
-      groupIds: ['dg-personal'], provenance: 'extracted', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'extracted', confirmed: true, sensitive: false,
     },
 
     // ── Goals ─────────────────────────────────────────────────────
@@ -121,7 +117,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(20), updatedAt: daysAgo(12), linkedIds: ['dn-proj-palette'],
       active: true, pinned: true, memoryType: 'episodic', scope: 'Personal', importance: 1.0,
       projectId: 'dp-personal', conversationIds: ['dc-palette'],
-      groupIds: ['dg-creative'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-goal-rust', category: 'goal', title: 'Write a real CLI tool in Rust',
@@ -141,7 +137,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(100), updatedAt: daysAgo(100), linkedIds: [],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Personal', importance: 0.9,
       projectId: undefined, conversationIds: [],
-      groupIds: ['dg-personal'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-fact-work', category: 'fact', title: 'Remote design engineer at a dev-tools startup',
@@ -150,7 +146,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(80), updatedAt: daysAgo(17), linkedIds: [],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Work', importance: 0.85,
       projectId: 'dp-work', conversationIds: ['dc-sprint'],
-      groupIds: ['dg-work'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-fact-pets', category: 'fact', title: 'Dog Pesto + cat Miso',
@@ -159,7 +155,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(50), updatedAt: daysAgo(22), linkedIds: [],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Personal', importance: 0.6,
       projectId: 'dp-personal', conversationIds: ['dc-morning'],
-      groupIds: ['dg-personal'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-fact-morning', category: 'fact', title: 'Morning routine: espresso → sketch → Pesto walk',
@@ -168,7 +164,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(22), updatedAt: daysAgo(22), linkedIds: ['dn-fact-pets', 'dn-pref-espresso'],
       active: true, pinned: true, memoryType: 'episodic', scope: 'Personal', importance: 0.7,
       projectId: 'dp-personal', conversationIds: ['dc-morning'],
-      groupIds: ['dg-personal'], provenance: 'extracted', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'extracted', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-fact-games', category: 'fact', title: 'Games: Hollow Knight, Celeste, Stardew',
@@ -177,7 +173,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(35), updatedAt: daysAgo(35), linkedIds: [],
       active: false, pinned: false, memoryType: 'semantic', scope: 'Personal', importance: 0.45,
       projectId: undefined, conversationIds: [],
-      groupIds: ['dg-personal'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
 
     // ── Projects ──────────────────────────────────────────────────
@@ -188,7 +184,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(45), updatedAt: daysAgo(12), linkedIds: ['dn-goal-palette', 'dn-skill-react'],
       active: true, pinned: true, memoryType: 'episodic', scope: 'Personal', importance: 0.95,
       projectId: 'dp-personal', conversationIds: ['dc-palette'],
-      groupIds: ['dg-creative'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-proj-ds', category: 'project', title: 'Work design system — button refactor',
@@ -197,7 +193,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(10), updatedAt: daysAgo(4), linkedIds: ['dn-skill-figma', 'dn-skill-react'],
       active: true, pinned: false, memoryType: 'episodic', scope: 'Work', importance: 0.8,
       projectId: 'dp-work', conversationIds: ['dc-ds'],
-      groupIds: ['dg-work'], provenance: 'user', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'user', confirmed: true, sensitive: false,
     },
 
     // ── Conversations ─────────────────────────────────────────────
@@ -208,7 +204,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(17), updatedAt: daysAgo(17), linkedIds: ['dn-fact-work'],
       active: true, pinned: false, memoryType: 'episodic', scope: 'Work', importance: 0.65,
       projectId: 'dp-work', conversationIds: ['dc-sprint'],
-      groupIds: ['dg-work'], provenance: 'extracted', confirmed: true, sensitive: false,
+      groupIds: [], provenance: 'extracted', confirmed: true, sensitive: false,
     },
     {
       id: 'dn-conv-rust', category: 'conversation', title: 'Rust ownership deep dive',
@@ -227,7 +223,7 @@ function defaultNodes(): MentalModelNode[] {
       createdAt: daysAgo(3), updatedAt: daysAgo(3), linkedIds: ['dn-proj-palette'],
       active: true, pinned: false, memoryType: 'semantic', scope: 'Personal', importance: 0.6,
       projectId: 'dp-personal', conversationIds: ['dc-palette'],
-      groupIds: ['dg-creative'], provenance: 'agent', confirmed: false, sensitive: false,
+      groupIds: [], provenance: 'agent', confirmed: false, sensitive: false,
     },
   ]
 }

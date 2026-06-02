@@ -32,10 +32,9 @@ export default function App() {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
     importNodes, addSummaryNode,
-    projects, addProject,
+    projects, addProject, updateProject,
     conversations, addConversation,
     groups, addGroup, updateGroup, toggleGroupActive,
-    updateProject,
   } = useMentalModelStore()
 
   const [view, setView]                             = useState<View>('canvas')
@@ -55,10 +54,22 @@ export default function App() {
   const [copied, setCopied] = useState(false)
   const [inferMode, setInferMode] = useState<InferenceMode | null>(null)
   const [inferSourceNodes, setInferSourceNodes] = useState<typeof nodes | null>(null)
+  const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null)
 
   function openInfer(mode: InferenceMode, src?: typeof nodes) {
     setInferMode(mode)
     setInferSourceNodes(src ?? null)
+  }
+
+  function handleFocusNode(id: string) {
+    setView('canvas')
+    setCanvasFocusId(id)
+  }
+
+  function handleSidebarAddNode(ctx: { projectId?: string; conversationId?: string; groupId?: string }) {
+    if (ctx.projectId)     setProjectFilter(ctx.projectId)
+    if (ctx.conversationId) setConversationFilter(ctx.conversationId)
+    setAddOpen(true)
   }
 
   // Governance paper: inactive groups reduce effective active context
@@ -216,6 +227,9 @@ export default function App() {
           onToggleGroupActive={toggleGroupActive}
           onUpdateProject={updateProject}
           onUpdateGroup={updateGroup}
+          onAddNode={handleSidebarAddNode}
+          onFocusNode={handleFocusNode}
+          onDeleteNode={id => { deleteNode(id); setSelectedIds(p => { const n = new Set(p); n.delete(id); return n }) }}
         />
 
         {/* ── Main column ───────────────────────────────── */}
@@ -331,6 +345,8 @@ export default function App() {
                     projectFilter={projectFilter}
                     conversationFilter={conversationFilter}
                     onUpdateProject={updateProject}
+                    focusNodeId={canvasFocusId}
+                    onFocusConsumed={() => setCanvasFocusId(null)}
                   />
                 </div>
               )}
