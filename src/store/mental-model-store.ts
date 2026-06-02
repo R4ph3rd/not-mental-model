@@ -286,6 +286,52 @@ function loadGroups(): MemoryGroup[] {
 }
 function persistGroups(g: MemoryGroup[]) { localStorage.setItem(GROUPS_KEY, JSON.stringify(g)) }
 
+// ── mem0 sync helpers ──────────────────────────────────────────────────────
+
+/** A node is eligible for mem0 only if an agent should see it. */
+function shouldSyncToMem0(node: MentalModelNode): boolean {
+  if (node.sensitive)                                   return false
+  if (!node.active)                                     return false
+  if (node.provenance === 'agent' && !node.confirmed)   return false // wait for user confirmation
+  if (node.importance < 0.05)                           return false // near-zero weight nodes
+  return true
+}
+
+/**
+ * Rich text representation for mem0 storage.
+ * Includes category, memory type, tags, scope, and confidence so mem0's
+ * vector index and BM25 search can match on all these dimensions.
+ */
+function nodeToMem0Text(node: MentalModelNode): string {
+  const lines: string[] = [
+    `[${node.category}][${node.memoryType}] ${node.title}: ${node.content}`,
+  ]
+  if (node.tags.length)      lines.push(`tags: ${node.tags.join(', ')}`)
+  if (node.scope)            lines.push(`scope: ${node.scope}`)
+  if (node.confidence !== 'high') lines.push(`confidence: ${node.confidence}`)
+  return lines.join(' | ')
+}
+
+/**
+ * Full metadata envelope stored with every mem0 memory.
+ * Used for client-side re-ranking by importance, filtering by
+ * category/confidence, and round-trip node resolution.
+ */
+function nodeToMem0Metadata(node: MentalModelNode): Record<string, unknown> {
+  return {
+    nodeId:     node.id,
+    category:   node.category,
+    confidence: node.confidence,
+    memoryType: node.memoryType,
+    importance: node.importance,
+    scope:      node.scope || null,
+    tags:       node.tags,
+    provenance: node.provenance,
+    confirmed:  node.confirmed,
+    projectId:  node.projectId ?? null,
+  }
+}
+
 // ── Store hook ─────────────────────────────────────────────────────────────
 
 export interface NodeFormData {
@@ -339,16 +385,16 @@ export function useMentalModelStore() {
       conversationIds: conversationIds ?? [],
     }
     mutateNodes(prev => [node, ...prev])
-    // Fire-and-forget mem0 sync (non-sensitive nodes only)
-    if (!node.sensitive) {
+    // Fire-and-forget mem0 sync — respects all eligibility gates
+    if (shouldSyncToMem0(node)) {
       void (async () => {
         const cfg = getMem0Config()
         if (!cfg) return
         try {
           const mem0Id = await mem0AddMemory(
             cfg.apiKey, cfg.userId,
-            `${node.title}: ${node.content}`,
-            { nodeId: node.id, category: node.category, confidence: node.confidence },
+            nodeToMem0Text(node),
+            nodeToMem0Metadata(node),
           )
           if (mem0Id) {
             mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0Id } : n))
@@ -361,16 +407,18 @@ export function useMentalModelStore() {
 
   const updateNode = useCallback((id: string, data: Partial<NodeFormData> & { conversationIds?: string[] }) => {
     mutateNodes(prev => prev.map(n => n.id === id ? { ...n, ...data, updatedAt: now() } : n))
-    // Sync title/content changes to mem0
-    if (data.title !== undefined || data.content !== undefined) {
+    // Sync to mem0 when any text-affecting or semantic field changes
+    const TEXT_FIELDS = ['title', 'content', 'tags', 'scope', 'confidence', 'memoryType', 'importance'] as const
+    const hasSemanticChange = TEXT_FIELDS.some(f => f in data)
+    if (hasSemanticChange) {
       const node = nodesRef.current.find(n => n.id === id)
-      if (node?.mem0Id && !node.sensitive) {
+      if (node?.mem0Id && shouldSyncToMem0({ ...node, ...data })) {
         const updated = { ...node, ...data }
         void (async () => {
           const cfg = getMem0Config()
           if (!cfg) return
           try {
-            await mem0Update(cfg.apiKey, node.mem0Id!, `${updated.title}: ${updated.content}`)
+            await mem0Update(cfg.apiKey, node.mem0Id!, nodeToMem0Text(updated as MentalModelNode))
           } catch { /* non-fatal */ }
         })()
       }
@@ -393,7 +441,27 @@ export function useMentalModelStore() {
   }, [mutateNodes])
 
   const toggleActive = useCallback((id: string) => {
-    mutateNodes(prev => prev.map(n => n.id === id ? { ...n, active: !n.active, updatedAt: now() } : n))
+    const node = nodesRef.current.find(n => n.id === id)
+    if (!node) return
+    const becomingActive = !node.active
+    mutateNodes(prev => prev.map(n => n.id === id ? { ...n, active: becomingActive, updatedAt: now() } : n))
+    void (async () => {
+      const cfg = getMem0Config()
+      if (!cfg) return
+      try {
+        if (!becomingActive) {
+          // deactivated → remove from mem0 so agent no longer sees it
+          if (node.mem0Id) await mem0Delete(cfg.apiKey, node.mem0Id)
+        } else {
+          // re-activated → push to mem0 if it was never synced (or was deleted)
+          const updated = { ...node, active: true }
+          if (!node.mem0Id && shouldSyncToMem0(updated)) {
+            const mem0Id = await mem0AddMemory(cfg.apiKey, cfg.userId, nodeToMem0Text(updated), nodeToMem0Metadata(updated))
+            if (mem0Id) mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0Id } : n))
+          }
+        }
+      } catch { /* non-fatal */ }
+    })()
   }, [mutateNodes])
 
   const togglePin = useCallback((id: string) => {
@@ -402,6 +470,19 @@ export function useMentalModelStore() {
 
   const confirmNode = useCallback((id: string) => {
     mutateNodes(prev => prev.map(n => n.id === id ? { ...n, confirmed: true, updatedAt: now() } : n))
+    // Agent-inferred nodes are skipped on creation; sync now that the user confirmed them
+    void (async () => {
+      const node = nodesRef.current.find(n => n.id === id)
+      if (!node || node.mem0Id) return // already synced
+      const confirmed = { ...node, confirmed: true }
+      if (!shouldSyncToMem0(confirmed)) return
+      const cfg = getMem0Config()
+      if (!cfg) return
+      try {
+        const mem0Id = await mem0AddMemory(cfg.apiKey, cfg.userId, nodeToMem0Text(confirmed), nodeToMem0Metadata(confirmed))
+        if (mem0Id) mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0Id } : n))
+      } catch { /* non-fatal */ }
+    })()
   }, [mutateNodes])
 
   const setPosition = useCallback((id: string, x: number, y: number) => {
@@ -444,6 +525,15 @@ export function useMentalModelStore() {
       groupIds: [], provenance: 'extracted', confirmed: true, sensitive: false,
     }
     mutateNodes(prev => [node, ...prev])
+    // Summary nodes are high-importance agent-extracted facts — push to mem0
+    void (async () => {
+      const cfg = getMem0Config()
+      if (!cfg) return
+      try {
+        const mem0Id = await mem0AddMemory(cfg.apiKey, cfg.userId, nodeToMem0Text(node), nodeToMem0Metadata(node))
+        if (mem0Id) mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0Id } : n))
+      } catch { /* non-fatal */ }
+    })()
     return node
   }, [mutateNodes])
 

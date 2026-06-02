@@ -74,18 +74,37 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onClose }: Props) {
       let primed: RecalledMemory[] = []
 
       if (mem0) {
-        // Semantic search with a broad "get to know the user" query
+        // Fetch double the limit so importance re-ranking has candidates to sort
         const found = await mem0Search(
           mem0.apiKey, mem0.userId,
           'user background knowledge preferences goals skills projects',
-          PRIME_LIMIT,
+          PRIME_LIMIT * 2,
         )
-        primed = matchToNodes(found)
+        // Re-rank: blend mem0 semantic score (60%) with stored importance (40%)
+        const ranked = found
+          .map(m => {
+            const node = nodes.find(n =>
+              n.title.toLowerCase().includes(m.memory.slice(0, 20).toLowerCase()) ||
+              m.memory.toLowerCase().includes(n.title.toLowerCase())
+            )
+            const importance = (m.metadata?.importance as number | undefined) ?? node?.importance ?? 0.5
+            const combined = (m.score ?? 0.5) * 0.6 + importance * 0.4
+            return { m, node, combined }
+          })
+          .sort((a, b) => b.combined - a.combined)
+          .slice(0, PRIME_LIMIT)
+        primed = ranked.map(({ m, node }) => ({
+          text: m.memory,
+          nodeId: node?.id,
+          nodeTitle: node?.title,
+          score: m.score,
+        }))
       } else {
-        // Fallback: top active non-sensitive nodes from local graph
+        // Fallback: top active non-sensitive nodes sorted by importance
         const inactiveGroups = new Set(groups.filter(g => !g.active).map(g => g.id))
         primed = nodes
           .filter(n => n.active && !n.sensitive && !n.groupIds.some(gid => inactiveGroups.has(gid)))
+          .sort((a, b) => b.importance - a.importance)
           .slice(0, PRIME_LIMIT)
           .map(n => ({ text: `${n.title}: ${n.content}`, nodeId: n.id, nodeTitle: n.title }))
       }
