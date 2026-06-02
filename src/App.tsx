@@ -53,6 +53,12 @@ export default function App() {
   const [onboardingDone, setOnboardingDone] = useState(() => !!localStorage.getItem('mm-onboarding-done'))
   const [copied, setCopied] = useState(false)
   const [inferMode, setInferMode] = useState<InferenceMode | null>(null)
+  const [inferSourceNodes, setInferSourceNodes] = useState<typeof nodes | null>(null)
+
+  function openInfer(mode: InferenceMode, src?: typeof nodes) {
+    setInferMode(mode)
+    setInferSourceNodes(src ?? null)
+  }
 
   // Governance paper: inactive groups reduce effective active context
   const inactiveGroupIds = useMemo(
@@ -245,26 +251,11 @@ export default function App() {
               <Button size="sm" variant="outline" onClick={() => { setAiTab('extract'); setAiOpen(true) }}>
                 <FolderInput className="h-3.5 w-3.5 t-accent" />Import / Extract
               </Button>
-              {/* Explore — two exploratory inference modes via a small dropdown */}
-              <div className="relative group">
-                <Button size="sm" variant="outline"
-                  title="Explore: infer hidden facts or suggest relevant knowledge"
-                  onClick={() => setInferMode('explore-infer')}>
-                  <Telescope className="h-3.5 w-3.5 t-accent" />Explore
-                </Button>
-                <div className="absolute right-0 top-full mt-1 z-20 hidden group-hover:flex flex-col w-52 t-ui border t-border rounded-xl shadow-xl overflow-hidden">
-                  <button className="flex flex-col px-3 py-2.5 text-left hover:t-accent-subtle transition-colors border-b t-border"
-                    onClick={() => setInferMode('explore-infer')}>
-                    <span className="text-xs font-medium t-text">Infer hidden facts</span>
-                    <span className="text-[10px] t-muted mt-0.5">What's probably true but not yet recorded?</span>
-                  </button>
-                  <button className="flex flex-col px-3 py-2.5 text-left hover:t-accent-subtle transition-colors"
-                    onClick={() => setInferMode('explore-suggest')}>
-                    <span className="text-xs font-medium t-text">Suggest relevant knowledge</span>
-                    <span className="text-[10px] t-muted mt-0.5">Skills, topics, or goals you might add</span>
-                  </button>
-                </div>
-              </div>
+              <Button size="sm" variant="outline"
+                title="Infer hidden facts probably true but not yet recorded"
+                onClick={() => openInfer('explore-infer')}>
+                <Telescope className="h-3.5 w-3.5 t-accent" />Explore
+              </Button>
               <Button size="sm" onClick={() => setAddOpen(true)}>
                 <Plus className="h-3.5 w-3.5" />Add
               </Button>
@@ -344,8 +335,13 @@ export default function App() {
                     <Button size="sm" variant="outline" onClick={() => { setAiTab('summarize'); setAiOpen(true) }}>
                       <Sparkles className="h-3.5 w-3.5 t-accent" />Summarize
                     </Button>
+                    <Button size="sm" variant="outline"
+                      onClick={() => openInfer('explore-suggest', selectedNodes)}
+                      title="Suggest relevant knowledge based on selected nodes">
+                      <Telescope className="h-3.5 w-3.5 t-accent" />Suggest
+                    </Button>
                     {selectedIds.size >= 2 && (
-                      <Button size="sm" variant="outline" onClick={() => setInferMode('from-selection')}
+                      <Button size="sm" variant="outline" onClick={() => openInfer('from-selection')}
                         title="Ask AI to infer new nodes from the selected nodes">
                         <Bot className="h-3.5 w-3.5 t-accent" />Infer
                       </Button>
@@ -416,9 +412,9 @@ export default function App() {
       {inferMode && (
         <InferenceModal
           mode={inferMode}
-          nodes={inferMode === 'from-selection' ? selectedNodes : nodes.filter(isNodeVisibleToAgent)}
+          nodes={inferSourceNodes ?? (inferMode === 'from-selection' ? selectedNodes : nodes.filter(isNodeVisibleToAgent))}
           onAddNodes={handleAgentNodes}
-          onClose={() => setInferMode(null)}
+          onClose={() => { setInferMode(null); setInferSourceNodes(null) }}
         />
       )}
     </TooltipProvider>
