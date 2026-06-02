@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
   Share2, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare, Telescope, Bot,
+  Network,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ import { NodeForm } from '@/components/NodeForm'
 import { ClaudeSync } from '@/components/ClaudeSync'
 import { StatsBar } from '@/components/StatsBar'
 import { Canvas } from '@/components/canvas/Canvas'
+import { GraphView } from '@/components/graph/GraphView'
 import { Timeline } from '@/views/Timeline'
 import { InspectorPanel } from '@/components/InspectorPanel'
 import { SettingsPanel } from '@/components/SettingsPanel'
@@ -25,7 +27,7 @@ import { useMentalModelStore } from '@/store/mental-model-store'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import type { NodeCategory, MentalModelNode } from '@/types/mental-model'
 
-type View = 'grid' | 'canvas' | 'timeline'
+type View = 'grid' | 'canvas' | 'graph' | 'timeline'
 
 export default function App() {
   const {
@@ -63,8 +65,8 @@ export default function App() {
   }
 
   function handleFocusNode(id: string) {
-    setView('canvas')
     setCanvasFocusId(id)
+    setView(v => (v === 'canvas' || v === 'graph') ? v : 'canvas')
   }
 
   function handleFocusGroup(id: string) {
@@ -216,8 +218,9 @@ export default function App() {
 
   const hasSelection = selectedIds.size > 0
   const VIEW_ICONS: Record<View, React.ReactNode> = {
-    grid: <LayoutGrid className="h-3.5 w-3.5" />,
-    canvas: <GitBranch className="h-3.5 w-3.5" />,
+    grid:     <LayoutGrid className="h-3.5 w-3.5" />,
+    canvas:   <GitBranch className="h-3.5 w-3.5" />,
+    graph:    <Network className="h-3.5 w-3.5" />,
     timeline: <GitCommitHorizontal className="h-3.5 w-3.5" />,
   }
 
@@ -282,7 +285,7 @@ export default function App() {
 
             {/* View switcher — Xu 2025 adds Timeline */}
             <div className="flex rounded-lg overflow-hidden border t-border">
-              {(['grid', 'canvas', 'timeline'] as View[]).map((v, i) => (
+              {(['grid', 'canvas', 'graph', 'timeline'] as View[]).map((v, i) => (
                 <button key={v} onClick={() => setView(v)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors capitalize ${
                     view === v ? 't-accent-subtle t-accent font-medium' : 't-muted hover:t-bg hover:t-text'
@@ -359,6 +362,18 @@ export default function App() {
                     )}
                   </div>
                 </ScrollArea>
+              ) : view === 'graph' ? (
+                <div className="flex-1 min-h-0">
+                  <GraphView
+                    nodes={nodes}
+                    selectedIds={selectedIds}
+                    onSelectNode={id => { setSelectedIds(new Set([id])); setInspectorId(id) }}
+                    groups={groups}
+                    projects={projects}
+                    focusNodeId={canvasFocusId}
+                    onFocusConsumed={() => setCanvasFocusId(null)}
+                  />
+                </div>
               ) : (
                 <div className="flex-1 min-h-0">
                   <Canvas
