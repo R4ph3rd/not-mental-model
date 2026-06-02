@@ -29,7 +29,7 @@ const MODE_CONFIG: Record<InferenceMode, { title: string; subtitle: string; syst
     title: 'Infer from selection',
     subtitle: 'What else might be true given these nodes?',
     system: `You are an inference engine for a personal AI knowledge graph.
-Given a set of known facts about a user, infer additional knowledge — facts, preferences, goals, or skills — that likely follow from what's known.
+Given a set of known facts about you, infer additional knowledge — facts, preferences, goals, or skills — that likely follow from what's known.
 Return ONLY a JSON array (no markdown fences):
 [{"title":"...","content":"...","category":"fact|preference|goal|skill|project|conversation","confidence":"high|medium|low","reasoning":"brief explanation"}]
 Generate 4–6 candidates. Each must be genuinely new (not restate the input), plausible, and useful. Vary confidence levels honestly.`,
@@ -38,7 +38,7 @@ Generate 4–6 candidates. Each must be genuinely new (not restate the input), p
     title: 'Infer hidden facts',
     subtitle: 'What is probably true but not yet recorded?',
     system: `You are an exploratory inference engine for a personal AI knowledge graph.
-Given a user's full knowledge graph, identify facts, skills, preferences, or goals that are likely true but not yet explicitly recorded.
+Given your full knowledge graph, identify facts, skills, preferences, or goals that are likely true but not yet explicitly recorded.
 Look for patterns, gaps, and logical implications.
 Return ONLY a JSON array (no markdown fences):
 [{"title":"...","content":"...","category":"fact|preference|goal|skill","confidence":"high|medium|low","reasoning":"why you think this is likely true"}]
@@ -48,8 +48,8 @@ Generate 5–8 candidates. Focus on high-value inferences that would genuinely i
     title: 'Suggest relevant knowledge',
     subtitle: 'What might be valuable to add or learn?',
     system: `You are a knowledge-gap advisor for a personal AI knowledge graph.
-Given a user's existing knowledge base, suggest skills, topics, or facts that could be valuable for them to explore or add.
-Think about: skills that complement existing ones, goals aligned with their interests, knowledge gaps in their domains.
+Given your existing knowledge base, suggest skills, topics, or facts that could be valuable for you to explore or add.
+Think about: skills that complement your existing ones, goals aligned with your interests, knowledge gaps in your domains.
 Return ONLY a JSON array (no markdown fences):
 [{"title":"...","content":"...","category":"fact|preference|goal|skill","confidence":"medium|low","reasoning":"why this might be relevant"}]
 Generate 5–7 suggestions. Be concrete and actionable. Mark confidence as medium/low since these are speculative.`,
