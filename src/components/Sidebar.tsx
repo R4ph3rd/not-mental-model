@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import {
   Brain, MessageSquare, Lightbulb, Heart, Target, Zap,
   Eye, EyeOff, ChevronDown, ChevronRight, Folder, X,
   FolderPlus, MessageSquarePlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ColorPicker } from '@/components/ColorPicker'
 import type { NodeCategory, Project, Conversation, MemoryGroup, MentalModelNode } from '@/types/mental-model'
 import { CATEGORY_LABELS } from '@/types/mental-model'
 
@@ -37,42 +38,6 @@ function InlineInput({ placeholder, onSubmit, onCancel }: {
   )
 }
 
-function ColorDot({ color, onChange }: { color: string; onChange: (c: string) => void }) {
-  const ref = useRef<HTMLInputElement>(null)
-  // Convert hsl string to #rrggbb for the native picker (best-effort)
-  function hslToHex(hsl: string): string {
-    try {
-      const m = hsl.match(/hsl\((\d+)\s+([\d.]+)%\s+([\d.]+)%/)
-      if (!m) return '#6366f1'
-      const h = parseInt(m[1]) / 360, s = parseFloat(m[2]) / 100, l = parseFloat(m[3]) / 100
-      const a = s * Math.min(l, 1 - l)
-      const f = (n: number) => {
-        const k = (n + h * 12) % 12
-        return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))))
-      }
-      return `#${f(0).toString(16).padStart(2,'0')}${f(8).toString(16).padStart(2,'0')}${f(4).toString(16).padStart(2,'0')}`
-    } catch { return '#6366f1' }
-  }
-  function hexToHsl(hex: string): string {
-    const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255
-    const max = Math.max(r,g,b), min = Math.min(r,g,b), l = (max+min)/2
-    if (max === min) return `hsl(0 0% ${Math.round(l*100)}%)`
-    const d = max-min, s = l > 0.5 ? d/(2-max-min) : d/(max+min)
-    const h = max===r ? (g-b)/d+(g<b?6:0) : max===g ? (b-r)/d+2 : (r-g)/d+4
-    return `hsl(${Math.round(h/6*360)} ${Math.round(s*100)}% ${Math.round(l*100)}%)`
-  }
-  return (
-    <button
-      className="h-3 w-3 rounded-full shrink-0 ring-1 ring-white/20 hover:ring-white/50 transition-all cursor-pointer"
-      style={{ backgroundColor: color }}
-      title="Click to change color"
-      onClick={e => { e.stopPropagation(); ref.current?.click() }}
-    >
-      <input ref={ref} type="color" className="sr-only" value={hslToHex(color)}
-        onChange={e => onChange(hexToHsl(e.target.value))} />
-    </button>
-  )
-}
 
 interface Props {
   nodes: MentalModelNode[]
@@ -191,7 +156,7 @@ export function Sidebar({
                     <button onClick={() => toggleExpanded(project.id)} className="t-muted hover:t-text shrink-0">
                       {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                     </button>
-                    <ColorDot color={project.color} onChange={c => onUpdateProject(project.id, { color: c })} />
+                    <ColorPicker color={project.color} onChange={c => onUpdateProject(project.id, { color: c })} />
                     {renamingId === project.id ? (
                       <input autoFocus defaultValue={project.name}
                         className="flex-1 bg-transparent border-b t-border text-xs t-text outline-none min-w-0"
@@ -245,7 +210,7 @@ export function Sidebar({
                           <div key={sub.id}
                             className={cn('flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] transition-colors group',
                               isSubFilter ? 't-accent-subtle' : 'hover:t-card')}>
-                            <ColorDot color={sub.color} onChange={c => onUpdateGroup(sub.id, { color: c })} />
+                            <ColorPicker color={sub.color} onChange={c => onUpdateGroup(sub.id, { color: c })} />
                             {renamingId === sub.id ? (
                               <input autoFocus defaultValue={sub.name}
                                 className="flex-1 bg-transparent border-b t-border text-xs t-text outline-none min-w-0"
@@ -302,7 +267,7 @@ export function Sidebar({
                     </button>
                   )}
                   {subs.length === 0 && <span className="w-3 shrink-0" />}
-                  <ColorDot color={group.color} onChange={c => onUpdateGroup(group.id, { color: c })} />
+                  <ColorPicker color={group.color} onChange={c => onUpdateGroup(group.id, { color: c })} />
                   {renamingId === group.id ? (
                     <input autoFocus defaultValue={group.name}
                       className="flex-1 bg-transparent border-b t-border text-xs t-text outline-none min-w-0"
@@ -334,7 +299,7 @@ export function Sidebar({
                   <div className="ml-4 border-l t-border pl-2 pb-1 space-y-0.5">
                     {subs.map(sub => (
                       <div key={sub.id} className="flex items-center gap-1.5 px-2 py-1 text-[11px] t-muted">
-                        <ColorDot color={sub.color} onChange={c => onUpdateGroup(sub.id, { color: c })} />
+                        <ColorPicker color={sub.color} onChange={c => onUpdateGroup(sub.id, { color: c })} />
                         <span className="flex-1 truncate">{sub.name}</span>
                         <span className="text-[10px] tabular-nums">{countByGroup(sub.id)}</span>
                       </div>
