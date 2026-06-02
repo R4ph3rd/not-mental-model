@@ -157,14 +157,23 @@ export default function App() {
     } catch { /* non-fatal */ }
   }
 
-  // Chat: agent auto-extracts nodes (Governance paper: provenance = 'agent')
+  // Chat / inference: auto-extracts nodes (Governance paper: provenance = 'agent')
   function handleAgentNodes(raw: Array<{ title: string; content: string; category: NodeCategory; confidence: 'high' | 'medium' | 'low' }>) {
+    // Determine target project: explicit filter, or majority project of selected nodes
+    let targetProject = projectFilter ?? undefined
+    if (!targetProject && inferMode === 'from-selection') {
+      const counts: Record<string, number> = {}
+      for (const n of selectedNodes) if (n.projectId) counts[n.projectId] = (counts[n.projectId] ?? 0) + 1
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]
+      if (top) targetProject = top[0]
+    }
+    const targetConvs = conversationFilter ? [conversationFilter] : undefined
     for (const n of raw) {
       addNode({
         ...n, tags: [], source: 'chat-auto', memoryType: 'semantic',
         scope: '', importance: 0.7,
         provenance: 'agent', confirmed: false, sensitive: false,
-      }, projectFilter ?? undefined, conversationFilter ? [conversationFilter] : undefined)
+      }, targetProject, targetConvs)
     }
   }
 
