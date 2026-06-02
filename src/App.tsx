@@ -34,7 +34,8 @@ export default function App() {
     importNodes, addSummaryNode,
     projects, addProject,
     conversations, addConversation,
-    groups, addGroup, toggleGroupActive,
+    groups, addGroup, updateGroup, toggleGroupActive,
+    updateProject,
   } = useMentalModelStore()
 
   const [view, setView]                             = useState<View>('canvas')
@@ -211,8 +212,10 @@ export default function App() {
           onGroupFilter={id => { setGroupFilter(id); setSelectedIds(new Set()) }}
           onAddProject={name => addProject(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`)}
           onAddConversation={(pid, title) => addConversation(pid, title)}
-          onAddGroup={name => addGroup(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`)}
+          onAddGroup={(name, parentId) => addGroup(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`, parentId)}
           onToggleGroupActive={toggleGroupActive}
+          onUpdateProject={updateProject}
+          onUpdateGroup={updateGroup}
         />
 
         {/* ── Main column ───────────────────────────────── */}
