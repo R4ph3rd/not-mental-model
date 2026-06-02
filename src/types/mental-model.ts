@@ -24,6 +24,7 @@ export interface MemoryGroup {
   name: string
   color: string
   active: boolean  // when false, all members are excluded from agent context
+  parentId?: string  // optional parent project/group id for nesting
   createdAt: string
 }
 

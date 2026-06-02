@@ -419,6 +419,10 @@ export function useMentalModelStore() {
     return p
   }, [mutateProjects])
 
+  const updateProject = useCallback((id: string, data: Partial<Pick<Project, 'name' | 'color'>>) => {
+    mutateProjects(prev => prev.map(p => p.id === id ? { ...p, ...data } : p))
+  }, [mutateProjects])
+
   const deleteProject = useCallback((id: string) => {
     mutateProjects(prev => prev.filter(p => p.id !== id))
     setConversations(prev => { const next = prev.filter(c => c.projectId !== id); persistConversations(next); return next })
@@ -451,10 +455,14 @@ export function useMentalModelStore() {
     setGroups(prev => { const next = fn(prev); persistGroups(next); return next })
   }, [])
 
-  const addGroup = useCallback((name: string, color: string) => {
-    const g: MemoryGroup = { id: `g-${uid()}`, name, color, active: true, createdAt: now() }
+  const addGroup = useCallback((name: string, color: string, parentId?: string) => {
+    const g: MemoryGroup = { id: `g-${uid()}`, name, color, active: true, parentId, createdAt: now() }
     mutateGroups(prev => [...prev, g])
     return g
+  }, [mutateGroups])
+
+  const updateGroup = useCallback((id: string, data: Partial<Pick<MemoryGroup, 'name' | 'color' | 'parentId' | 'active'>>) => {
+    mutateGroups(prev => prev.map(g => g.id === id ? { ...g, ...data } : g))
   }, [mutateGroups])
 
   const deleteGroup = useCallback((id: string) => {
@@ -470,8 +478,8 @@ export function useMentalModelStore() {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
     linkNodes, unlinkNodes, importNodes, addSummaryNode,
-    projects, addProject, deleteProject,
+    projects, addProject, updateProject, deleteProject,
     conversations, addConversation, deleteConversation,
-    groups, addGroup, deleteGroup, toggleGroupActive,
+    groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
   }
 }
