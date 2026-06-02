@@ -10,6 +10,7 @@ interface Props {
   node: MentalModelNode
   position: { x: number; y: number }
   selected: boolean
+  groupColor?: string
   onMouseDown: (e: React.MouseEvent, id: string) => void
   onToggleActive: (id: string) => void
   onTogglePin: (id: string) => void
@@ -18,10 +19,11 @@ interface Props {
 }
 
 export function CanvasNode({
-  node, position, selected,
+  node, position, selected, groupColor,
   onMouseDown, onToggleActive, onTogglePin, onDelete, onEditRequest,
 }: Props) {
   const decay = computeDecayScore(node)
+  const tint = groupColor ? groupColor.replace(')', ' / 0.08)') : undefined
 
   return (
     <div
@@ -34,7 +36,7 @@ export function CanvasNode({
           : 't-border hover:border-white/25',
         !node.active && 'opacity-45',
       )}
-      style={{ left: position.x, top: position.y, width: CARD_W }}
+      style={{ left: position.x, top: position.y, width: CARD_W, backgroundColor: tint }}
       onMouseDown={e => onMouseDown(e, node.id)}
       onDoubleClick={e => { e.stopPropagation(); onEditRequest(node.id) }}
     >

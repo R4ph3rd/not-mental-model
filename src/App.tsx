@@ -324,6 +324,7 @@ export default function App() {
                     onEditRequest={id => setInspectorId(id)}
                     projects={projects}
                     conversations={conversations}
+                    groups={groups}
                     projectFilter={projectFilter}
                     conversationFilter={conversationFilter}
                   />

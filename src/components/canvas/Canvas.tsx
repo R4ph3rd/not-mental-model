@@ -5,7 +5,7 @@ import { CanvasLinks } from './CanvasLinks'
 import { CanvasNode } from './CanvasNode'
 import { CanvasArea } from './CanvasArea'
 import { computeDefaultPositions, CARD_W, CARD_H } from './layout'
-import type { MentalModelNode, Project, Conversation } from '@/types/mental-model'
+import type { MentalModelNode, Project, Conversation, MemoryGroup } from '@/types/mental-model'
 
 const AREA_PAD = 52
 
@@ -20,6 +20,7 @@ interface Props {
   onEditRequest: (id: string) => void
   projects?: Project[]
   conversations?: Conversation[]
+  groups?: MemoryGroup[]
   projectFilter?: string | null
   conversationFilter?: string | null
 }
@@ -40,7 +41,7 @@ export function Canvas({
   nodes, selectedIds,
   onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onSetPosition, onEditRequest,
-  projects, conversations, projectFilter, conversationFilter,
+  projects, conversations, groups, projectFilter, conversationFilter,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pan, setPan] = useState({ x: 60, y: 60 })
@@ -215,19 +216,25 @@ export function Canvas({
       >
         {areas.map(a => <CanvasArea key={a.id} {...a} />)}
         <CanvasLinks nodes={nodes} positions={livePositions} />
-        {nodes.map(node => (
-          <CanvasNode
-            key={node.id}
-            node={node}
-            position={livePositions[node.id] ?? { x: 0, y: 0 }}
-            selected={selectedIds.has(node.id)}
-            onMouseDown={handleNodeMouseDown}
-            onToggleActive={onToggleActive}
-            onTogglePin={onTogglePin}
-            onDelete={id => { onDeleteNode(id) }}
-            onEditRequest={onEditRequest}
-          />
-        ))}
+        {nodes.map(node => {
+          const groupColor =
+            (node.projectId ? projects?.find(p => p.id === node.projectId)?.color : undefined) ??
+            (node.groupIds[0] ? groups?.find(g => g.id === node.groupIds[0])?.color : undefined)
+          return (
+            <CanvasNode
+              key={node.id}
+              node={node}
+              position={livePositions[node.id] ?? { x: 0, y: 0 }}
+              selected={selectedIds.has(node.id)}
+              groupColor={groupColor}
+              onMouseDown={handleNodeMouseDown}
+              onToggleActive={onToggleActive}
+              onTogglePin={onTogglePin}
+              onDelete={id => { onDeleteNode(id) }}
+              onEditRequest={onEditRequest}
+            />
+          )
+        })}
       </div>
 
       {/* Zoom controls */}
