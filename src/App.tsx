@@ -32,9 +32,9 @@ export default function App() {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
     importNodes, addSummaryNode,
-    projects, addProject, updateProject,
+    projects, addProject, updateProject, deleteProject,
     conversations, addConversation,
-    groups, addGroup, updateGroup, toggleGroupActive,
+    groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
   } = useMentalModelStore()
 
   const [view, setView]                             = useState<View>('canvas')
@@ -70,6 +70,25 @@ export default function App() {
     if (ctx.projectId)     setProjectFilter(ctx.projectId)
     if (ctx.conversationId) setConversationFilter(ctx.conversationId)
     setAddOpen(true)
+  }
+
+  function handleDuplicateNode(id: string) {
+    const src = nodes.find(n => n.id === id)
+    if (!src) return
+    addNode({
+      category: src.category,
+      title: src.title + ' (copy)',
+      content: src.content,
+      tags: [...src.tags],
+      confidence: src.confidence,
+      source: src.source ?? '',
+      memoryType: src.memoryType,
+      scope: src.scope,
+      importance: src.importance,
+      provenance: src.provenance,
+      confirmed: src.confirmed,
+      sensitive: src.sensitive,
+    }, src.projectId, src.conversationIds.length ? [...src.conversationIds] : undefined)
   }
 
   // Governance paper: inactive groups reduce effective active context
@@ -229,7 +248,11 @@ export default function App() {
           onUpdateGroup={updateGroup}
           onAddNode={handleSidebarAddNode}
           onFocusNode={handleFocusNode}
+          onEditNode={id => setInspectorId(id)}
           onDeleteNode={id => { deleteNode(id); setSelectedIds(p => { const n = new Set(p); n.delete(id); return n }) }}
+          onDuplicateNode={handleDuplicateNode}
+          onDeleteProject={deleteProject}
+          onDeleteGroup={deleteGroup}
         />
 
         {/* ── Main column ───────────────────────────────── */}

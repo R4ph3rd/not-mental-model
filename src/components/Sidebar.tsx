@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Brain, MessageSquare, Lightbulb, Heart, Target, Zap,
   Eye, EyeOff, ChevronDown, ChevronRight, Folder, X,
   FolderPlus, MessageSquarePlus, CirclePlus,
+  Pencil, Trash2, Copy, Navigation,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ColorPicker } from '@/components/ColorPicker'
@@ -69,7 +70,11 @@ interface Props {
   onUpdateGroup: (id: string, data: { name?: string; color?: string }) => void
   onAddNode: (ctx: { projectId?: string; conversationId?: string; groupId?: string }) => void
   onFocusNode: (id: string) => void
+  onEditNode: (id: string) => void
   onDeleteNode: (id: string) => void
+  onDuplicateNode: (id: string) => void
+  onDeleteProject: (id: string) => void
+  onDeleteGroup: (id: string) => void
 }
 
 export function Sidebar({
@@ -79,7 +84,8 @@ export function Sidebar({
   onCategoryFilter, onProjectFilter, onConversationFilter, onGroupFilter,
   onAddProject, onAddConversation, onAddGroup, onToggleGroupActive,
   onUpdateProject, onUpdateGroup,
-  onAddNode, onFocusNode, onDeleteNode,
+  onAddNode, onFocusNode, onEditNode,
+  onDeleteNode, onDuplicateNode, onDeleteProject, onDeleteGroup,
 }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(projects.map(p => p.id)))
   const [addingConvIn, setAddingConvIn]     = useState<string | null>(null)
@@ -87,6 +93,29 @@ export function Sidebar({
   const [addingRootProject, setAddingRootProject] = useState(false)
   const [renamingId, setRenamingId]         = useState<string | null>(null)
   const [workspaceExpanded, setWorkspaceExpanded] = useState(true)
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number; y: number
+    type: 'project' | 'group' | 'node'
+    id: string
+    parentProjectId?: string
+  } | null>(null)
+  const ctxMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!ctxMenu) return
+    function close(e: MouseEvent) {
+      if (!ctxMenuRef.current?.contains(e.target as Node)) setCtxMenu(null)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [!!ctxMenu])
+
+  function openCtx(e: React.MouseEvent, type: 'project' | 'group' | 'node', id: string, parentProjectId?: string) {
+    e.preventDefault(); e.stopPropagation()
+    const x = Math.min(e.clientX, window.innerWidth  - 200)
+    const y = Math.min(e.clientY, window.innerHeight - 220)
+    setCtxMenu({ x, y, type, id, parentProjectId })
+  }
 
   function toggleExpanded(id: string) {
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -114,10 +143,11 @@ export function Sidebar({
   const rootNodes = nodes.filter(n => !n.projectId && n.groupIds.length === 0)
 
   // node rows — compact display inside the tree
-  function NodeRow({ node }: { node: MentalModelNode }) {
+  function NodeRow({ node, parentProjectId }: { node: MentalModelNode; parentProjectId?: string }) {
     return (
       <div className="group/node flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] t-muted hover:t-text hover:t-card transition-colors cursor-pointer"
         onClick={() => onFocusNode(node.id)}
+        onContextMenu={e => openCtx(e, 'node', node.id, parentProjectId)}
       >
         <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_DOT[node.category] }} />
         <span className="flex-1 truncate">{node.title}</span>
@@ -199,7 +229,8 @@ export function Sidebar({
               return (
                 <div key={project.id}>
                   <div className={cn('mx-1 flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs w-[calc(100%-8px)] transition-colors group',
-                    isActive ? 't-accent-subtle' : 'hover:t-card')}>
+                    isActive ? 't-accent-subtle' : 'hover:t-card')}
+                    onContextMenu={e => openCtx(e, 'project', project.id)}>
                     <button onClick={() => toggleExpanded(project.id)} className="t-muted hover:t-text shrink-0">
                       {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                     </button>
@@ -264,7 +295,7 @@ export function Sidebar({
                                 <CirclePlus className="h-2.5 w-2.5" />
                               </button>
                             </div>
-                            {convNodes.map(n => <NodeRow key={n.id} node={n} />)}
+                            {convNodes.map(n => <NodeRow key={n.id} node={n} parentProjectId={project.id} />)}
                           </div>
                         )
                       })}
@@ -309,7 +340,7 @@ export function Sidebar({
                       })}
 
                       {/* Direct project nodes (not in any conversation) */}
-                      {directNodes.map(n => <NodeRow key={n.id} node={n} />)}
+                      {directNodes.map(n => <NodeRow key={n.id} node={n} parentProjectId={project.id} />)}
 
                       {addingConvIn === project.id && (
                         <InlineInput placeholder="Conversation title…"
@@ -337,7 +368,8 @@ export function Sidebar({
             return (
               <div key={group.id}>
                 <div className={cn('mx-1 flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs w-[calc(100%-8px)] transition-colors group',
-                  isGroupFilter ? 't-accent-subtle' : 'hover:t-card')}>
+                  isGroupFilter ? 't-accent-subtle' : 'hover:t-card')}
+                  onContextMenu={e => openCtx(e, 'group', group.id)}>
                   {(subs.length > 0 || groupNodes.length > 0) ? (
                     <button onClick={() => toggleExpanded(group.id)} className="t-muted hover:t-text shrink-0">
                       {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -425,6 +457,73 @@ export function Sidebar({
           </button>
         )
       })}
+      {/* ── Context menu ─────────────────────────────────────────── */}
+      {ctxMenu && (
+        <div ref={ctxMenuRef}
+          className="fixed z-[200] t-ui border t-border rounded-xl shadow-2xl py-1 w-48 text-xs"
+          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          onMouseDown={e => e.stopPropagation()}>
+          {ctxMenu.type === 'node' ? (<>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { onFocusNode(ctxMenu.id); setCtxMenu(null) }}>
+              <Navigation className="h-3.5 w-3.5 shrink-0" />Find in canvas
+            </button>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { onDuplicateNode(ctxMenu.id); setCtxMenu(null) }}>
+              <Copy className="h-3.5 w-3.5 shrink-0" />Duplicate
+            </button>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { onEditNode(ctxMenu.id); setCtxMenu(null) }}>
+              <Pencil className="h-3.5 w-3.5 shrink-0" />Edit
+            </button>
+            <div className="border-t t-border my-1" />
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:text-red-400 transition-colors"
+              onClick={() => { onDeleteNode(ctxMenu.id); setCtxMenu(null) }}>
+              <Trash2 className="h-3.5 w-3.5 shrink-0" />Delete
+            </button>
+          </>) : ctxMenu.type === 'project' ? (<>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { onAddNode({ projectId: ctxMenu.id }); setCtxMenu(null) }}>
+              <CirclePlus className="h-3.5 w-3.5 shrink-0" />New node
+            </button>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { setAddingConvIn(ctxMenu.id); setCtxMenu(null) }}>
+              <MessageSquarePlus className="h-3.5 w-3.5 shrink-0" />New conversation
+            </button>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { setAddingGroupIn(ctxMenu.id); setCtxMenu(null) }}>
+              <FolderPlus className="h-3.5 w-3.5 shrink-0" />New sub-group
+            </button>
+            <div className="border-t t-border my-1" />
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { setRenamingId(ctxMenu.id); setCtxMenu(null) }}>
+              <Pencil className="h-3.5 w-3.5 shrink-0" />Rename
+            </button>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:text-red-400 transition-colors"
+              onClick={() => { onDeleteProject(ctxMenu.id); setCtxMenu(null) }}>
+              <Trash2 className="h-3.5 w-3.5 shrink-0" />Delete
+            </button>
+          </>) : (<>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { onAddNode({ groupId: ctxMenu.id }); setCtxMenu(null) }}>
+              <CirclePlus className="h-3.5 w-3.5 shrink-0" />New node
+            </button>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { setAddingGroupIn(ctxMenu.id); setCtxMenu(null) }}>
+              <FolderPlus className="h-3.5 w-3.5 shrink-0" />New sub-group
+            </button>
+            <div className="border-t t-border my-1" />
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:t-text hover:t-accent-subtle transition-colors"
+              onClick={() => { setRenamingId(ctxMenu.id); setCtxMenu(null) }}>
+              <Pencil className="h-3.5 w-3.5 shrink-0" />Rename
+            </button>
+            <button className="flex items-center gap-2 w-full px-3 py-2 t-muted hover:text-red-400 transition-colors"
+              onClick={() => { onDeleteGroup(ctxMenu.id); setCtxMenu(null) }}>
+              <Trash2 className="h-3.5 w-3.5 shrink-0" />Delete
+            </button>
+          </>)}
+        </div>
+      )}
     </aside>
   )
 }
