@@ -84,10 +84,11 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
   const [showConvPicker, setShowConvPicker] = useState(false)
   const [editingTitle, setEditingTitle]     = useState(false)
   const [titleDraft, setTitleDraft]         = useState('')
+  const [liveImportance, setLiveImportance] = useState<number | null>(null)
   const titleRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (editingTitle) titleRef.current?.select() }, [editingTitle])
-  useEffect(() => { setEditingTitle(false); setShowConvPicker(false) }, [node?.id])
+  useEffect(() => { setEditingTitle(false); setShowConvPicker(false); setLiveImportance(null) }, [node?.id])
 
   if (!node) return null
   const n = node
@@ -187,29 +188,42 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           </MetaRow>
         </div>
 
-        <Divider />
-
         {/* Importance */}
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <FieldLabel>Importance</FieldLabel>
-            <span className="text-[11px] t-muted">{Math.round(n.importance * 100)}%</span>
+            <span className="text-[11px] font-medium tabular-nums" style={{ color: CATEGORY_HEADER_BORDER[n.category] }}>
+              {Math.round((liveImportance ?? n.importance) * 100)}%
+            </span>
           </div>
-          <input
-            key={n.id}
-            type="range" min={0} max={1} step={0.05}
-            defaultValue={n.importance}
-            onMouseUp={e  => upd('importance', Number((e.target as HTMLInputElement).value))}
-            onTouchEnd={e => upd('importance', Number((e.target as HTMLInputElement).value))}
-            className="w-full cursor-pointer
-              [&::-webkit-slider-runnable-track]:h-1.5
-              [&::-webkit-slider-runnable-track]:rounded-full
-              [&::-webkit-slider-runnable-track]:bg-white/10
-              [&::-moz-range-track]:h-1.5
-              [&::-moz-range-track]:rounded-full
-              [&::-moz-range-track]:bg-white/10"
-            style={{ accentColor: CATEGORY_HEADER_BORDER[n.category] }}
-          />
+          <div className="relative flex items-center h-4">
+            <div className="absolute inset-x-0 h-1 rounded-full bg-white/10" />
+            <div
+              className="absolute h-1 rounded-full"
+              style={{
+                width: `${(liveImportance ?? n.importance) * 100}%`,
+                background: CATEGORY_HEADER_BORDER[n.category],
+              }}
+            />
+            <input
+              key={n.id}
+              type="range" min={0} max={1} step={0.05}
+              defaultValue={n.importance}
+              onChange={e => setLiveImportance(Number(e.target.value))}
+              onMouseUp={e => { const v = Number((e.target as HTMLInputElement).value); setLiveImportance(v); upd('importance', v) }}
+              onTouchEnd={e => { const v = Number((e.target as HTMLInputElement).value); setLiveImportance(v); upd('importance', v) }}
+              className="relative w-full cursor-pointer appearance-none bg-transparent
+                [&::-webkit-slider-thumb]:appearance-none
+                [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+                [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer
+                [&::-webkit-slider-runnable-track]:opacity-0
+                [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5
+                [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white
+                [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer
+                [&::-moz-range-track]:opacity-0"
+            />
+          </div>
         </div>
 
         <Divider />
