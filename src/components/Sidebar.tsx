@@ -158,6 +158,11 @@ export function Sidebar({
   const [_draggingType, setDraggingType] = useState<'node' | 'conversation' | 'group' | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
 
+  // Local ordering overrides (session-scoped, not persisted)
+  const [convOrderMap, setConvOrderMap] = useState<Record<string, string[]>>({})
+  const [nodeOrderMap, setNodeOrderMap] = useState<Record<string, string[]>>({})
+  const [dropItemTarget, setDropItemTarget] = useState<string | null>(null) // 'conv:<id>' or 'node:<id>'
+
   useEffect(() => {
     if (!ctxMenu) return
     function close(e: MouseEvent) {
@@ -233,22 +238,75 @@ export function Sidebar({
   }
 
   function resetDrag() {
-    setDraggingId(null); setDraggingType(null); setDropTargetId(null)
+    setDraggingId(null); setDraggingType(null); setDropTargetId(null); setDropItemTarget(null)
+  }
+
+  function reorderConvs(groupId: string, dragId: string, beforeId: string) {
+    const base = convOrderMap[groupId] ?? conversations.filter(c => c.projectId === groupId).map(c => c.id)
+    const without = base.filter(id => id !== dragId)
+    const idx = without.indexOf(beforeId)
+    without.splice(idx < 0 ? without.length : idx, 0, dragId)
+    setConvOrderMap(prev => ({ ...prev, [groupId]: without }))
+  }
+
+  function reorderNodes(groupId: string, dragId: string, beforeId: string, directIds: string[]) {
+    const base = nodeOrderMap[groupId] ?? directIds
+    const without = base.filter(id => id !== dragId)
+    const idx = without.indexOf(beforeId)
+    without.splice(idx < 0 ? without.length : idx, 0, dragId)
+    setNodeOrderMap(prev => ({ ...prev, [groupId]: without }))
+  }
+
+  function orderedConvs(groupId: string) {
+    const convs = conversations.filter(c => c.projectId === groupId)
+    const order = convOrderMap[groupId]
+    if (!order) return convs
+    return [...order.map(id => convs.find(c => c.id === id)).filter(Boolean) as typeof convs,
+            ...convs.filter(c => !order.includes(c.id))]
+  }
+
+  function orderedDirectNodes(groupId: string, directNodes: MentalModelNode[]) {
+    const order = nodeOrderMap[groupId]
+    if (!order) return directNodes
+    return [...order.map(id => directNodes.find(n => n.id === id)).filter(Boolean) as typeof directNodes,
+            ...directNodes.filter(n => !order.includes(n.id))]
   }
 
   // ── Node row ──────────────────────────────────────────────────────────────
-  function NodeRow({ node }: { node: MentalModelNode }) {
+  function NodeRow({ node, groupId }: { node: MentalModelNode; groupId?: string }) {
     const isSelected = selectedNodeIds.has(node.id)
     const isDragging = draggingId === node.id
+    const isDropTarget = dropItemTarget === `node:${node.id}`
     return (
       <div
         draggable
         onDragStart={e => handleDragStart(e, node.id, 'node')}
         onDragEnd={resetDrag}
+        onDragOver={groupId ? (e => {
+          e.preventDefault(); e.stopPropagation()
+          e.dataTransfer.dropEffect = 'move'
+          setDropItemTarget(`node:${node.id}`)
+        }) : undefined}
+        onDragLeave={groupId ? () => setDropItemTarget(null) : undefined}
+        onDrop={groupId ? (e => {
+          e.preventDefault(); e.stopPropagation()
+          const raw = e.dataTransfer.getData('text/plain')
+          const [type, id] = raw.split(':')
+          if (type === 'node' && id !== node.id) {
+            const directIds = nodes.filter(n => n.projectId === groupId && !n.conversationIds.some(cid =>
+              conversations.filter(c => c.projectId === groupId).map(c => c.id).includes(cid)
+            )).map(n => n.id)
+            reorderNodes(groupId, id, node.id, directIds)
+          } else if (type === 'conversation') {
+            onUpdateConversation(id, { projectId: groupId })
+          }
+          resetDrag()
+        }) : undefined}
         className={cn(
           'group/node flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] transition-colors cursor-pointer',
           isSelected ? 't-accent-subtle t-accent' : 't-muted hover:t-text hover:t-card',
           isDragging && 'opacity-40',
+          isDropTarget && 'border-t-2 border-t-white/30',
         )}
         onClick={() => onFocusNode(node.id)}
         onContextMenu={e => openCtx(e, 'node', node.id)}
@@ -274,15 +332,34 @@ export function Sidebar({
       n.conversationIds.includes(conv.id) && (groupId ? n.projectId === groupId : !n.projectId)
     )
     const isDragging = draggingId === conv.id
+    const isDropTarget = dropItemTarget === `conv:${conv.id}`
     return (
       <div className={cn(isDragging && 'opacity-40')}>
         <div className={cn(
           'flex items-center rounded-md transition-colors group/conv',
           isActive ? 't-accent-subtle' : 'hover:t-card',
+          isDropTarget && 'border-t-2 border-t-white/30',
         )}
           draggable
           onDragStart={e => handleDragStart(e, conv.id, 'conversation')}
           onDragEnd={resetDrag}
+          onDragOver={e => {
+            e.preventDefault(); e.stopPropagation()
+            e.dataTransfer.dropEffect = 'move'
+            setDropItemTarget(`conv:${conv.id}`)
+          }}
+          onDragLeave={() => setDropItemTarget(null)}
+          onDrop={e => {
+            e.preventDefault(); e.stopPropagation()
+            const raw = e.dataTransfer.getData('text/plain')
+            const [type, id] = raw.split(':')
+            if (type === 'conversation' && groupId && id !== conv.id) {
+              reorderConvs(groupId, id, conv.id)
+            } else if (type === 'node' && groupId) {
+              onMoveNodeToGroup(id, groupId)
+            }
+            resetDrag()
+          }}
         >
           <button
             onClick={() => { onGroupFilter(groupId ?? null); onConversationFilter(conv.id) }}
@@ -470,7 +547,9 @@ export function Sidebar({
 
                 {isOpen && (
                   <div className="ml-4 border-l t-border pl-2 pb-1 space-y-0.5">
-                    {convs.map(conv => <ConvRow key={conv.id} conv={conv} groupId={group.id} />)}
+                    {orderedConvs(group.id).map(conv => <ConvRow key={conv.id} conv={conv} groupId={group.id} />)}
+
+                    {orderedDirectNodes(group.id, directNodes).map(n => <NodeRow key={n.id} node={n} groupId={group.id} />)}
 
                     {subs.map(sub => {
                       const isSubFilter = groupFilter === sub.id
@@ -515,7 +594,6 @@ export function Sidebar({
                       )
                     })}
 
-                    {directNodes.map(n => <NodeRow key={n.id} node={n} />)}
 
                     {addingConvIn === group.id && (
                       <InlineInput placeholder="Conversation title…"
