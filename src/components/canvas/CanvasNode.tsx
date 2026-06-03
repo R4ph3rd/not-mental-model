@@ -1,10 +1,19 @@
-import { Eye, EyeOff, Pin, Edit2, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, Pin, Edit2, Trash2, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
-import type { MentalModelNode } from '@/types/mental-model'
+import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
 import { CATEGORY_COLORS, CATEGORY_LABELS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import { CARD_W } from './layout'
 import { cn } from '@/lib/utils'
+
+const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
+  project:      <FolderKanban className="h-3 w-3" />,
+  conversation: <MessageSquare className="h-3 w-3" />,
+  fact:         <Lightbulb className="h-3 w-3" />,
+  preference:   <Heart className="h-3 w-3" />,
+  goal:         <Target className="h-3 w-3" />,
+  skill:        <Zap className="h-3 w-3" />,
+}
 
 interface Props {
   node: MentalModelNode
@@ -40,20 +49,22 @@ export function CanvasNode({
       onMouseDown={e => onMouseDown(e, node.id)}
       onDoubleClick={e => { e.stopPropagation(); onEditRequest(node.id) }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
-        <span className={cn('text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0', CATEGORY_COLORS[node.category])}>
-          {CATEGORY_LABELS[node.category]}
+      {/* Category title bar — matches grid card style */}
+      <div className={cn('flex items-center gap-1.5 px-3 py-1.5 border-b shrink-0', CATEGORY_COLORS[node.category])}>
+        {CATEGORY_ICONS[node.category]}
+        <span className="text-[11px] font-semibold leading-none">{CATEGORY_LABELS[node.category]}</span>
+        <span className={cn('text-[10px] opacity-70 ml-0.5',
+          node.memoryType === 'episodic' ? 'text-violet-200' : 'text-teal-200')}>
+          {node.memoryType}
         </span>
-        <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
+        <span className={cn('text-[10px] shrink-0 ml-1', CONFIDENCE_COLORS[node.confidence])}>●</span>
 
         <div className="flex items-center gap-0.5 ml-auto shrink-0">
-          {/* Pin */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 className={cn('h-5 w-5 flex items-center justify-center rounded transition-colors',
-                  node.pinned ? 'text-amber-400' : 't-muted hover:t-text')}
+                  node.pinned ? 'text-amber-300' : 't-muted hover:t-text')}
                 onMouseDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
               >
@@ -63,12 +74,11 @@ export function CanvasNode({
             <TooltipContent>{node.pinned ? 'Unpin' : 'Pin to retain'}</TooltipContent>
           </Tooltip>
 
-          {/* Eye */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 className={cn('h-5 w-5 flex items-center justify-center rounded transition-colors',
-                  node.active ? 't-muted hover:t-text' : 'text-red-400 hover:text-red-300')}
+                  node.active ? 't-muted hover:t-text' : 'text-red-300')}
                 onMouseDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
               >
@@ -78,19 +88,16 @@ export function CanvasNode({
             <TooltipContent>{node.active ? 'Hide from agent' : 'Show to agent'}</TooltipContent>
           </Tooltip>
 
-          {/* Edit */}
           <button
             className="h-5 w-5 flex items-center justify-center rounded t-muted hover:t-text transition-colors"
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onEditRequest(node.id) }}
-            title="Edit (or double-click)"
+            title="Edit"
           >
             <Edit2 className="h-3 w-3" />
           </button>
-
-          {/* Delete */}
           <button
-            className="h-5 w-5 flex items-center justify-center rounded t-muted hover:text-red-400 transition-colors"
+            className="h-5 w-5 flex items-center justify-center rounded t-muted hover:text-red-300 transition-colors"
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(node.id) }}
             title="Delete"
@@ -119,15 +126,6 @@ export function CanvasNode({
         </div>
       )}
 
-      {/* Memory type */}
-      <div className="px-3 pb-2 flex items-center gap-1.5 text-[9px]">
-        <span className={cn('px-1.5 py-0.5 rounded-full border',
-          node.memoryType === 'episodic'
-            ? 'border-violet-500/30 text-violet-400/70'
-            : 'border-teal-500/30 text-teal-400/70')}>
-          {node.memoryType}
-        </span>
-      </div>
 
       {/* Decay bar */}
       <Tooltip>
