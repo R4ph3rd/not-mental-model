@@ -3,7 +3,7 @@ import {
   Brain, MessageSquare, Lightbulb, Heart, Target, Zap,
   Eye, EyeOff, ChevronDown, ChevronRight, Folder, X,
   FolderPlus, MessageSquarePlus, CirclePlus,
-  Pencil, Trash2, Copy, Navigation, SlidersHorizontal,
+  Pencil, Trash2, Copy, Navigation, ListFilter,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { NodeCategory, Project, Conversation, MemoryGroup, MentalModelNode } from '@/types/mental-model'
@@ -136,6 +136,7 @@ export function Sidebar({
 }: Props) {
   const [expanded, setExpanded]   = useState<Set<string>>(() => new Set(projects.map(p => p.id)))
   const [addingConvIn, setAddingConvIn]       = useState<string | null>(null)
+  const [addingConvAtRoot, setAddingConvAtRoot] = useState(false)
   const [addingGroupIn, setAddingGroupIn]     = useState<string | null>(null)
   const [addingRootProject, setAddingRootProject] = useState(false)
   const [renamingId, setRenamingId]           = useState<string | null>(null)
@@ -258,7 +259,7 @@ export function Sidebar({
             )}
             title="Filter by type"
           >
-            <SlidersHorizontal className="h-3 w-3" />
+            <ListFilter className="h-3 w-3" />
           </button>
         </div>
         {filterOpen && (
@@ -284,21 +285,27 @@ export function Sidebar({
       </div>
 
       {/* ── Knowledge workspace ──────────────────────────────────── */}
-      <div className="mt-3 mb-1 px-3 flex items-center gap-1">
+      <div className="mt-3 mb-1 px-3 flex items-center gap-1 group/ws">
         <button onClick={() => setWorkspaceExpanded(v => !v)}
           className="flex items-center gap-1 t-muted hover:t-text transition-colors flex-1 min-w-0">
           {workspaceExpanded ? <ChevronDown className="h-2.5 w-2.5 shrink-0" /> : <ChevronRight className="h-2.5 w-2.5 shrink-0" />}
           <p className="text-[10px] uppercase tracking-widest truncate">Knowledge workspace</p>
         </button>
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/ws:opacity-100 transition-opacity">
           <button onClick={() => onAddNode({})} className="t-muted hover:t-accent transition-colors" title="New node">
             <CirclePlus className="h-3 w-3" />
           </button>
-          <button onClick={() => {
-            const proj = onAddProject('New project')
-            setExpanded(prev => new Set([...prev, proj.id]))
-            setAddingConvIn(proj.id)
-          }} className="t-muted hover:t-accent transition-colors" title="New conversation">
+          <button
+            onClick={() => {
+              if (projectFilter) {
+                // Add conv to current project
+                if (!expanded.has(projectFilter)) toggleExpanded(projectFilter)
+                setAddingConvIn(projectFilter)
+              } else {
+                setAddingConvAtRoot(true)
+              }
+            }}
+            className="t-muted hover:t-accent transition-colors" title="New conversation">
             <MessageSquarePlus className="h-3 w-3" />
           </button>
           <button onClick={() => setAddingRootProject(true)} className="t-muted hover:t-accent transition-colors" title="New group">
@@ -549,6 +556,16 @@ export function Sidebar({
 
           {rootNodes.map(n => <NodeRow key={n.id} node={n} />)}
 
+          {addingConvAtRoot && (
+            <InlineInput placeholder="Project name…"
+              onSubmit={name => {
+                const proj = onAddProject(name)
+                setExpanded(prev => new Set([...prev, proj.id]))
+                setAddingConvIn(proj.id)
+                setAddingConvAtRoot(false)
+              }}
+              onCancel={() => setAddingConvAtRoot(false)} />
+          )}
           {addingRootProject && (
             <InlineInput placeholder="Group name…"
               onSubmit={n => { onAddProject(n); setAddingRootProject(false) }}
