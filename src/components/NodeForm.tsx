@@ -48,7 +48,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 // ─── PillSelect ────────────────────────────────────────────────────────────────
 
-interface PillOption<T extends string> { value: T; label: string }
+interface PillOption<T extends string> { value: T; label: string; activeClassName?: string }
 
 interface PillSelectProps<T extends string> {
   value: T
@@ -75,7 +75,10 @@ export function PillSelect<T extends string>({ value, options, onChange }: PillS
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border t-border bg-white/[0.04] t-text hover:bg-white/[0.08] transition-colors"
+        className={cn(
+          'flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border t-border bg-white/[0.04] hover:bg-white/[0.08] transition-colors',
+          current.activeClassName ?? 't-text',
+        )}
       >
         {current.label}
         <ChevronDown className="h-3 w-3 t-muted" />

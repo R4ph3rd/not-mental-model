@@ -39,9 +39,9 @@ const CATEGORY_OPTIONS = (
   Object.entries(CATEGORY_LABELS) as [NodeCategory, string][]
 ).map(([value, label]) => ({ value, label }))
 
-const MEMORY_TYPE_OPTIONS: { value: MemoryType; label: string }[] = [
-  { value: 'semantic', label: 'Semantic' },
-  { value: 'episodic', label: 'Episodic' },
+const MEMORY_TYPE_OPTIONS: { value: MemoryType; label: string; activeClassName: string }[] = [
+  { value: 'semantic', label: 'Semantic', activeClassName: 'border-teal-500/40 text-teal-300' },
+  { value: 'episodic', label: 'Episodic', activeClassName: 'border-violet-500/40 text-violet-300' },
 ]
 
 const CONFIDENCE_OPTIONS: { value: ConfidenceLevel; label: string }[] = [
