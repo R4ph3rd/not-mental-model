@@ -250,7 +250,7 @@ export default function App() {
           onConversationFilter={id => { setConversationFilter(id); setSelectedIds(new Set()) }}
           onGroupFilter={id => { setGroupFilter(id); setSelectedIds(new Set()) }}
           onAddProject={name => addProject(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`)}
-          onAddConversation={(pid, title) => addConversation(pid, title)}
+          onAddConversation={(pid, title) => { addConversation(pid, title); setChatOpen(true) }}
           onAddGroup={(name, parentId) => addGroup(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`, parentId)}
           onToggleGroupActive={toggleGroupActive}
           onUpdateProject={updateProject}
