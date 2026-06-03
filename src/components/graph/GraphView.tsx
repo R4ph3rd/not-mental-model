@@ -261,26 +261,37 @@ export function GraphView({
 
       // Always-visible label for selected nodes; hover label for others
       if (isHovered || isSelected) {
-        const label    = node.title.length > 36 ? node.title.slice(0, 34) + '…' : node.title
-        const fontSize = Math.max(10, 12 / scale)
+        const label     = node.title.length > 36 ? node.title.slice(0, 34) + '…' : node.title
+        const retLabel  = `R: ${Math.round(retention * 100)}%`
+        const fontSize  = Math.max(10, 12 / scale)
+        const smallSize = Math.max(8, 10 / scale)
         ctx.font = `${fontSize}px system-ui, -apple-system, sans-serif`
-
-        const tw      = ctx.measureText(label).width
-        const padH    = 4 / scale
-        const padV    = 3 / scale
-        const boxW    = tw + padH * 2
-        const boxH    = fontSize + padV * 2
-        const bx      = p.x - boxW / 2
-        const by      = p.y - r - boxH - 5 / scale
+        const tw  = ctx.measureText(label).width
+        ctx.font  = `${smallSize}px system-ui, -apple-system, sans-serif`
+        const rw  = ctx.measureText(retLabel).width
+        const padH   = 4 / scale
+        const padV   = 3 / scale
+        const gap    = 2 / scale
+        const boxW   = Math.max(tw, rw) + padH * 2
+        const boxH   = fontSize + gap + smallSize + padV * 2
+        const bx     = p.x - boxW / 2
+        const by     = p.y - r - boxH - 5 / scale
 
         roundedRect(ctx, bx, by, boxW, boxH, 4 / scale)
         ctx.fillStyle = 'rgba(0,0,0,0.72)'
         ctx.fill()
 
-        ctx.fillStyle = 'rgba(255,255,255,0.94)'
         ctx.textAlign    = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(label, p.x, by + boxH / 2)
+
+        ctx.font      = `${fontSize}px system-ui, -apple-system, sans-serif`
+        ctx.fillStyle = 'rgba(255,255,255,0.94)'
+        ctx.fillText(label, p.x, by + padV + fontSize / 2)
+
+        ctx.font      = `${smallSize}px system-ui, -apple-system, sans-serif`
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'
+        ctx.fillText(retLabel, p.x, by + padV + fontSize + gap + smallSize / 2)
+
         ctx.textAlign    = 'left'
         ctx.textBaseline = 'alphabetic'
       }
