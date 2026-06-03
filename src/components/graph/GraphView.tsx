@@ -46,7 +46,9 @@ function resolveColor(node: MentalModelNode, groups?: MemoryGroup[], projects?: 
 }
 
 function resolveRadius(node: MentalModelNode): number {
-  return Math.min(18, 5 + Math.sqrt(node.linkedIds.length + 1) * 2.8)
+  // size ∝ retention (importance) × connectivity (links)
+  const score = node.importance * (node.linkedIds.length + 1)
+  return Math.max(5, Math.min(22, 4 + Math.sqrt(score) * 4.5))
 }
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -211,15 +213,18 @@ export function GraphView({
       const isSelected = selectedIds.has(node.id)
       const isHovered  = node.id === hoveredId
 
-      // Glow halo
+      // Glow halo — use globalAlpha so HSL/hex colors work equally
       if (isHovered) {
+        ctx.save()
+        ctx.globalAlpha = 0.35
         const grad = ctx.createRadialGradient(p.x, p.y, r, p.x, p.y, r + 10)
-        grad.addColorStop(0, color + '50')
+        grad.addColorStop(0, color)
         grad.addColorStop(1, 'transparent')
         ctx.beginPath()
         ctx.arc(p.x, p.y, r + 10, 0, Math.PI * 2)
         ctx.fillStyle = grad
         ctx.fill()
+        ctx.restore()
       }
 
       // Selection ring
@@ -417,22 +422,27 @@ export function GraphView({
     if (canvas) canvas.style.cursor = hoveredIdRef.current ? 'pointer' : 'grab'
   }
 
-  function onWheel(e: React.WheelEvent<HTMLCanvasElement>) {
-    e.preventDefault()
+  // Non-passive wheel listener so e.preventDefault() blocks browser page-zoom (ctrl+scroll / pinch)
+  useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const rect  = canvas.getBoundingClientRect()
-    const cx    = e.clientX - rect.left - canvas.offsetWidth  / 2 - panRef.current.x
-    const cy    = e.clientY - rect.top  - canvas.offsetHeight / 2 - panRef.current.y
-    const factor    = e.deltaY > 0 ? 0.9 : 1.1
-    const newScale  = Math.max(0.15, Math.min(4, scaleRef.current * factor))
-    const scaleDelta = newScale / scaleRef.current
-    panRef.current  = {
-      x: panRef.current.x - cx * (scaleDelta - 1),
-      y: panRef.current.y - cy * (scaleDelta - 1),
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const rect  = canvas.getBoundingClientRect()
+      const cx    = e.clientX - rect.left - canvas.offsetWidth  / 2 - panRef.current.x
+      const cy    = e.clientY - rect.top  - canvas.offsetHeight / 2 - panRef.current.y
+      const factor    = e.deltaY > 0 ? 0.9 : 1.1
+      const newScale  = Math.max(0.15, Math.min(4, scaleRef.current * factor))
+      const scaleDelta = newScale / scaleRef.current
+      panRef.current  = {
+        x: panRef.current.x - cx * (scaleDelta - 1),
+        y: panRef.current.y - cy * (scaleDelta - 1),
+      }
+      scaleRef.current = newScale
     }
-    scaleRef.current = newScale
-  }
+    canvas.addEventListener('wheel', handler, { passive: false })
+    return () => canvas.removeEventListener('wheel', handler)
+  }, [])
 
   function onMouseLeave() {
     hoveredIdRef.current = null
@@ -455,7 +465,6 @@ export function GraphView({
         onMouseDown={onMouseDown}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseLeave}
-        onWheel={onWheel}
       />
     </div>
   )
