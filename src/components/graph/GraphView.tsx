@@ -161,6 +161,7 @@ export function GraphView({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    try {
 
     const dpr = window.devicePixelRatio || 1
     const cssW = canvas.offsetWidth
@@ -213,16 +214,13 @@ export function GraphView({
       const isSelected = selectedIds.has(node.id)
       const isHovered  = node.id === hoveredId
 
-      // Glow halo — use globalAlpha so HSL/hex colors work equally
+      // Glow halo — draw solid arc at reduced opacity (avoids HSL gradient crash)
       if (isHovered) {
         ctx.save()
-        ctx.globalAlpha = 0.35
-        const grad = ctx.createRadialGradient(p.x, p.y, r, p.x, p.y, r + 10)
-        grad.addColorStop(0, color)
-        grad.addColorStop(1, 'transparent')
+        ctx.globalAlpha = 0.25
         ctx.beginPath()
         ctx.arc(p.x, p.y, r + 10, 0, Math.PI * 2)
-        ctx.fillStyle = grad
+        ctx.fillStyle = color
         ctx.fill()
         ctx.restore()
       }
@@ -239,8 +237,10 @@ export function GraphView({
       // Node fill
       ctx.beginPath()
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
-      ctx.fillStyle = node.active ? color : color + '44'
+      if (!node.active) ctx.globalAlpha = 0.27
+      ctx.fillStyle = color
       ctx.fill()
+      ctx.globalAlpha = 1
 
       // Always-visible label for selected nodes; hover label for others
       if (isHovered || isSelected) {
@@ -270,6 +270,7 @@ export function GraphView({
     }
 
     ctx.restore()
+    } catch { ctx.restore() }
   }, [])
 
   // ── Simulation + render loop ─────────────────────────────────────────────────
