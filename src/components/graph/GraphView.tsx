@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react'
 import type { MentalModelNode, MemoryGroup, Project } from '@/types/mental-model'
+import { computeDecayScore } from '@/lib/decay'
 
 // ── Force parameters ──────────────────────────────────────────────────────────
 const REPULSION     = 5000
@@ -241,6 +242,22 @@ export function GraphView({
       ctx.fillStyle = color
       ctx.fill()
       ctx.globalAlpha = 1
+
+      // Retention arc — stroked circle, full = 100% retention
+      const retention = computeDecayScore(node)
+      if (retention > 0) {
+        const arcR     = r + 3 / scale
+        const startAng = -Math.PI / 2
+        const endAng   = startAng + retention * Math.PI * 2
+        ctx.save()
+        ctx.globalAlpha = node.active ? 0.7 : 0.3
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, arcR, startAng, endAng)
+        ctx.strokeStyle = color
+        ctx.lineWidth   = 1.5 / scale
+        ctx.stroke()
+        ctx.restore()
+      }
 
       // Always-visible label for selected nodes; hover label for others
       if (isHovered || isSelected) {
