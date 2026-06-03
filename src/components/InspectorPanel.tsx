@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, MessageSquare, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { NodeForm, PillSelect } from '@/components/NodeForm'
@@ -38,11 +38,23 @@ const CATEGORY_OPTIONS = (
 
 export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelete }: Props) {
   const [showConvPicker, setShowConvPicker] = useState(false)
+  const [editingTitle, setEditingTitle]     = useState(false)
+  const [titleDraft, setTitleDraft]         = useState('')
+  const titleRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (editingTitle) titleRef.current?.select() }, [editingTitle])
+  useEffect(() => { setEditingTitle(false) }, [node?.id])
+
   if (!node) return null
   const n = node
 
   const nodeConvs     = conversations.filter(c => (n.conversationIds ?? []).includes(c.id))
   const availableConvs = conversations.filter(c => !(n.conversationIds ?? []).includes(c.id))
+
+  function commitTitle() {
+    if (titleDraft.trim() && titleDraft.trim() !== n.title) onUpdate(n.id, { title: titleDraft.trim() })
+    setEditingTitle(false)
+  }
 
   function addConv(convId: string) {
     onUpdate(n.id, { conversationIds: [...(n.conversationIds ?? []), convId] })
@@ -68,7 +80,29 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           options={CATEGORY_OPTIONS}
           onChange={v => onUpdate(n.id, { category: v })}
         />
-        <span className="flex-1 text-sm font-medium t-text truncate">{n.title}</span>
+
+        {editingTitle ? (
+          <input
+            ref={titleRef}
+            value={titleDraft}
+            onChange={e => setTitleDraft(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); commitTitle() }
+              if (e.key === 'Escape') setEditingTitle(false)
+            }}
+            className="flex-1 text-sm font-medium t-text bg-transparent border-b border-white/25 outline-none"
+          />
+        ) : (
+          <span
+            className="flex-1 text-sm font-medium t-text truncate cursor-text select-none"
+            onDoubleClick={() => { setTitleDraft(n.title); setEditingTitle(true) }}
+            title="Double-click to rename"
+          >
+            {n.title}
+          </span>
+        )}
+
         <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 hover:bg-white/10" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
