@@ -390,6 +390,7 @@ export default function App() {
                     onDeleteNode={id => { deleteNode(id); setSelectedIds(p => { const n = new Set(p); n.delete(id); return n }) }}
                     onToggleActive={toggleActive}
                     onTogglePin={togglePin}
+                    onToggleSensitive={id => updateNode(id, { sensitive: !nodes.find(n => n.id === id)?.sensitive })}
                     onSetPosition={setPosition}
                     onEditRequest={id => setInspectorId(id)}
                     projects={projects}

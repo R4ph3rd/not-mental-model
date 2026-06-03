@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Pin, Edit2, Trash2, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap } from 'lucide-react'
+import { Eye, EyeOff, Pin, Edit2, Trash2, Lock, Unlock, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
@@ -23,20 +23,21 @@ interface Props {
   onMouseDown: (e: React.MouseEvent, id: string) => void
   onToggleActive: (id: string) => void
   onTogglePin: (id: string) => void
+  onToggleSensitive?: (id: string) => void
   onDelete: (id: string) => void
   onEditRequest: (id: string) => void
 }
 
 export function CanvasNode({
   node, position, selected, groupColor,
-  onMouseDown, onToggleActive, onTogglePin, onDelete, onEditRequest,
+  onMouseDown, onToggleActive, onTogglePin, onToggleSensitive, onDelete, onEditRequest,
 }: Props) {
   const decay = computeDecayScore(node)
 
   return (
     <div
       className={cn(
-        'absolute rounded-xl border flex flex-col select-none overflow-hidden',
+        'group absolute rounded-xl border flex flex-col select-none overflow-hidden',
         'cursor-grab active:cursor-grabbing t-card',
         'transition-shadow duration-150',
         selected
@@ -63,11 +64,27 @@ export function CanvasNode({
         <span className={cn('text-[10px] shrink-0 ml-1', CONFIDENCE_COLORS[node.confidence])}>●</span>
 
         <div className="flex items-center gap-0.5 ml-auto shrink-0">
+          {/* Sensitive — always visible when active, hover-only otherwise */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-colors',
-                  node.pinned ? 'text-amber-300' : 't-muted hover:t-text')}
+                className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
+                  node.sensitive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
+                onMouseDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id) }}
+              >
+                {node.sensitive ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{node.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}</TooltipContent>
+          </Tooltip>
+
+          {/* Pin — always visible when pinned */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
+                  node.pinned ? 'text-amber-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onMouseDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
               >
@@ -77,11 +94,12 @@ export function CanvasNode({
             <TooltipContent>{node.pinned ? 'Unpin' : 'Pin to retain'}</TooltipContent>
           </Tooltip>
 
+          {/* Eye — always visible when hidden */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-colors',
-                  node.active ? 't-muted hover:t-text' : 'text-red-300')}
+                className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
+                  !node.active ? 'text-red-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onMouseDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
               >
@@ -92,7 +110,7 @@ export function CanvasNode({
           </Tooltip>
 
           <button
-            className="h-5 w-5 flex items-center justify-center rounded t-muted hover:t-text transition-colors"
+            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onEditRequest(node.id) }}
             title="Edit"
@@ -100,7 +118,7 @@ export function CanvasNode({
             <Edit2 className="h-3 w-3" />
           </button>
           <button
-            className="h-5 w-5 flex items-center justify-center rounded t-muted hover:text-red-300 transition-colors"
+            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:text-red-300 transition-opacity"
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(node.id) }}
             title="Delete"

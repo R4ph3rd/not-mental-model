@@ -16,6 +16,7 @@ interface Props {
   onDeleteNode: (id: string) => void
   onToggleActive: (id: string) => void
   onTogglePin: (id: string) => void
+  onToggleSensitive?: (id: string) => void
   onSetPosition: (id: string, x: number, y: number) => void
   onEditRequest: (id: string) => void
   projects?: Project[]
@@ -53,7 +54,7 @@ interface PanState {
 export function Canvas({
   nodes, selectedIds,
   onToggleSelect, onDeleteNode,
-  onToggleActive, onTogglePin, onSetPosition, onEditRequest,
+  onToggleActive, onTogglePin, onToggleSensitive, onSetPosition, onEditRequest,
   projects, conversations, groups, groupFilter, conversationFilter,
   onUpdateProject, focusNodeId, onFocusConsumed, focusGroupId, onFocusGroupConsumed,
 }: Props) {
@@ -344,6 +345,7 @@ export function Canvas({
               onMouseDown={handleNodeMouseDown}
               onToggleActive={onToggleActive}
               onTogglePin={onTogglePin}
+              onToggleSensitive={onToggleSensitive}
               onDelete={id => { onDeleteNode(id) }}
               onEditRequest={onEditRequest}
             />
