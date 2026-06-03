@@ -119,7 +119,7 @@ export function CanvasNode({
         </div>
       )}
 
-      {/* Memory type + scope */}
+      {/* Memory type */}
       <div className="px-3 pb-2 flex items-center gap-1.5 text-[9px]">
         <span className={cn('px-1.5 py-0.5 rounded-full border',
           node.memoryType === 'episodic'
@@ -127,7 +127,6 @@ export function CanvasNode({
             : 'border-teal-500/30 text-teal-400/70')}>
           {node.memoryType}
         </span>
-        {node.scope && <span className="t-muted">· {node.scope}</span>}
       </div>
 
       {/* Decay bar */}
