@@ -348,6 +348,7 @@ export interface NodeFormData {
   confirmed?: boolean
   sensitive?: boolean
   groupIds?: string[]
+  projectId?: string
 }
 
 export function useMentalModelStore() {
@@ -565,10 +566,14 @@ export function useMentalModelStore() {
     setConversations(prev => { const next = fn(prev); persistConversations(next); return next })
   }, [])
 
-  const addConversation = useCallback((projectId: string, title: string, source?: string) => {
+  const addConversation = useCallback((projectId: string | undefined, title: string, source?: string) => {
     const c: Conversation = { id: `c-${uid()}`, projectId, title, source, createdAt: now() }
     mutateConvs(prev => [...prev, c])
     return c
+  }, [mutateConvs])
+
+  const updateConversation = useCallback((id: string, data: Partial<Pick<Conversation, 'title' | 'projectId'>>) => {
+    mutateConvs(prev => prev.map(c => c.id === id ? { ...c, ...data } : c))
   }, [mutateConvs])
 
   const deleteConversation = useCallback((id: string) => {
@@ -609,7 +614,7 @@ export function useMentalModelStore() {
     toggleActive, togglePin, confirmNode, setPosition,
     linkNodes, unlinkNodes, importNodes, addSummaryNode,
     projects, addProject, updateProject, deleteProject,
-    conversations, addConversation, deleteConversation,
+    conversations, addConversation, updateConversation, deleteConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
   }
 }

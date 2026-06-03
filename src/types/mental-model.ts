@@ -12,7 +12,7 @@ export interface Project {
 
 export interface Conversation {
   id: string
-  projectId: string
+  projectId?: string   // optional — conversations can live at root
   title: string
   source?: string
   createdAt: string
