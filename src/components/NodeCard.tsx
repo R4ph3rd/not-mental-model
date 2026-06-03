@@ -147,13 +147,13 @@ export function NodeCard({
           </span>
         )}
 
-        {/* Action buttons */}
+        {/* Action buttons — state indicators always visible; others hover-only */}
         <div className="flex items-center gap-0.5 ml-auto">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
-                  node.sensitive ? 'opacity-100' : 'opacity-40 hover:opacity-80')}
+                  node.sensitive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onUpdate(node.id, { sensitive: !node.sensitive }) }}
               >
                 {node.sensitive ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
@@ -166,7 +166,7 @@ export function NodeCard({
             <TooltipTrigger asChild>
               <button
                 className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
-                  node.pinned ? 'text-amber-300 opacity-100' : 'opacity-40 hover:opacity-80')}
+                  node.pinned ? 'text-amber-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
               >
                 <Pin className="h-3 w-3" fill={node.pinned ? 'currentColor' : 'none'} />
@@ -179,7 +179,7 @@ export function NodeCard({
             <TooltipTrigger asChild>
               <button
                 className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
-                  node.active ? 'opacity-40 hover:opacity-80' : 'text-red-300 opacity-100')}
+                  !node.active ? 'text-red-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
               >
                 {node.active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -188,11 +188,13 @@ export function NodeCard({
             <TooltipContent>{node.active ? 'Hide from agent' : 'Show to agent'}</TooltipContent>
           </Tooltip>
 
-          <button className="h-5 w-5 flex items-center justify-center rounded opacity-40 hover:opacity-80 transition-opacity"
+          <button
+            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
             onClick={e => { e.stopPropagation(); onEditRequest(node.id) }}>
             <Edit2 className="h-3 w-3" />
           </button>
-          <button className="h-5 w-5 flex items-center justify-center rounded opacity-40 hover:text-red-300 hover:opacity-100 transition-opacity"
+          <button
+            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:text-red-300 hover:!opacity-100 transition-opacity"
             onClick={e => { e.stopPropagation(); onDelete(node.id) }}>
             <Trash2 className="h-3 w-3" />
           </button>
