@@ -177,7 +177,9 @@ export function Canvas({
     }
   }, [handleMouseMove, handleMouseUp])
 
-  function handleWheel(e: React.WheelEvent) {
+  // Keep a ref to the latest handler so the non-passive listener doesn't go stale
+  const wheelHandlerRef = useRef<(e: WheelEvent) => void>(() => {})
+  wheelHandlerRef.current = (e: WheelEvent) => {
     e.preventDefault()
     const rect = containerRef.current!.getBoundingClientRect()
     const mouseX = e.clientX - rect.left
@@ -189,6 +191,14 @@ export function Canvas({
     setPan({ x: mouseX - canvasX * newScale, y: mouseY - canvasY * newScale })
     setScale(newScale)
   }
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => wheelHandlerRef.current(e)
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
 
   function fitAll() {
     if (!containerRef.current || nodes.length === 0) return
@@ -302,7 +312,6 @@ export function Canvas({
         backgroundSize: '24px 24px',
       }}
       onMouseDown={handleCanvasMouseDown}
-      onWheel={handleWheel}
     >
       <div
         className="absolute"
