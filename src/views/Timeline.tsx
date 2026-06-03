@@ -63,12 +63,14 @@ export function Timeline({ nodes, onEditRequest }: Props) {
           <div className="flex items-center gap-3 mb-2">
             <p className="text-[11px] font-semibold t-muted uppercase tracking-wider shrink-0">{group.label}</p>
             <div className="flex-1 h-px t-border" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="text-[10px] font-bold t-muted uppercase tracking-wider shrink-0 cursor-help">R</p>
-              </TooltipTrigger>
-              <TooltipContent>Retention: recency × 0.4 + importance × 0.35 + confidence × 0.25</TooltipContent>
-            </Tooltip>
+            <div className="w-[60px] shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="text-[10px] font-bold t-muted uppercase tracking-wider cursor-help">R</p>
+                </TooltipTrigger>
+                <TooltipContent>Retention: recency × 0.4 + importance × 0.35 + confidence × 0.25</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
 
           {/* Timeline items */}
