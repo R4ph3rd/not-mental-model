@@ -47,8 +47,9 @@ export function CanvasNode({
       )}
       style={{
         left: position.x, top: position.y, width: CARD_W,
-        borderLeftColor: groupColor ?? undefined,
-        borderLeftWidth: groupColor ? '3px' : undefined,
+        backgroundImage: groupColor
+          ? `linear-gradient(${groupColor.replace(')', ' / 0.08)')}, ${groupColor.replace(')', ' / 0.08)')})`
+          : undefined,
       }}
       onMouseDown={e => onMouseDown(e, node.id)}
       onDoubleClick={e => { e.stopPropagation(); onEditRequest(node.id) }}
