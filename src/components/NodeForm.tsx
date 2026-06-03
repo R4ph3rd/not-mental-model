@@ -7,6 +7,7 @@ import { ChevronDown, Check } from 'lucide-react'
 import type { MentalModelNode, NodeCategory, ConfidenceLevel, MemoryType } from '@/types/mental-model'
 import { CATEGORY_LABELS } from '@/types/mental-model'
 import type { NodeFormData } from '@/store/mental-model-store'
+import { cn } from '@/lib/utils'
 
 interface Props {
   node?: MentalModelNode
@@ -100,13 +101,63 @@ export function PillSelect<T extends string>({ value, options, onChange }: PillS
   )
 }
 
+// ─── TagInput ──────────────────────────────────────────────────────────────────
+
+export function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
+  const [input, setInput] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function commit(raw: string) {
+    const tag = raw.trim().replace(/^#+/, '')
+    if (tag && !tags.includes(tag)) onChange([...tags, tag])
+    setInput('')
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex flex-wrap gap-1 items-center min-h-[36px] px-2.5 py-1.5',
+        'rounded-md border t-border bg-transparent cursor-text',
+        'focus-within:ring-1 focus-within:ring-ring transition-colors',
+      )}
+      onClick={() => inputRef.current?.focus()}
+    >
+      {tags.map(tag => (
+        <span key={tag} className="inline-flex items-center gap-0.5 text-[11px] px-2 py-0.5 rounded-full border t-border bg-white/[0.06] t-muted">
+          #{tag}
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); onChange(tags.filter(t => t !== tag)) }}
+            className="ml-0.5 hover:text-red-400 transition-colors leading-none"
+          >×</button>
+        </span>
+      ))}
+      <input
+        ref={inputRef}
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => {
+          if ((e.key === ' ' || e.key === 'Enter') && input.trim()) {
+            e.preventDefault(); commit(input)
+          } else if (e.key === 'Backspace' && input === '' && tags.length > 0) {
+            onChange(tags.slice(0, -1))
+          }
+        }}
+        onBlur={() => { if (input.trim()) commit(input) }}
+        placeholder={tags.length === 0 ? 'Add tags…' : ''}
+        className="flex-1 min-w-[60px] bg-transparent text-sm t-text outline-none placeholder:text-muted-foreground"
+      />
+    </div>
+  )
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 
 export function NodeForm({ node, onSubmit, onCancel, extraActions, hideTitle }: Props) {
   const [category,   setCategory]   = useState<NodeCategory>(node?.category ?? 'fact')
   const [title,      setTitle]      = useState(node?.title ?? '')
   const [content,    setContent]    = useState(node?.content ?? '')
-  const [tags,       setTags]       = useState(node?.tags.join(', ') ?? '')
+  const [tags,       setTags]       = useState<string[]>(node?.tags ?? [])
   const [confidence, setConfidence] = useState<ConfidenceLevel>(node?.confidence ?? 'medium')
   const [source,     setSource]     = useState(node?.source ?? '')
   const [memoryType, setMemoryType] = useState<MemoryType>(node?.memoryType ?? 'semantic')
@@ -120,7 +171,7 @@ export function NodeForm({ node, onSubmit, onCancel, extraActions, hideTitle }: 
       category, confidence, memoryType,
       title:   title.trim(),
       content: content.trim(),
-      tags:    tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags,
       source:  source.trim(),
       scope:   scope.trim(),
       importance,
@@ -163,17 +214,10 @@ export function NodeForm({ node, onSubmit, onCancel, extraActions, hideTitle }: 
           rows={6} className="resize-y min-h-[120px]" />
       </div>
 
-      {/* Tags — own row */}
+      {/* Tags — inline pill input */}
       <div>
-        <Label>Tags (comma-separated)</Label>
-        <Input value={tags} onChange={e => setTags(e.target.value)} placeholder="react, ai, design" />
-        {tags.trim() && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
-              <span key={t} className="text-[10px] px-1.5 py-0.5 rounded border t-border t-card t-muted">#{t}</span>
-            ))}
-          </div>
-        )}
+        <Label>Tags</Label>
+        <TagInput tags={tags} onChange={setTags} />
       </div>
 
       {/* Confidence + Scope */}
