@@ -19,6 +19,7 @@ interface Props {
   onToggleSensitive?: (id: string) => void
   onSetPosition: (id: string, x: number, y: number) => void
   onEditRequest: (id: string) => void
+  onUpdate?: (id: string, data: { title?: string }) => void
   projects?: Project[]
   conversations?: Conversation[]
   groups?: MemoryGroup[]
@@ -54,7 +55,7 @@ interface PanState {
 export function Canvas({
   nodes, selectedIds,
   onToggleSelect, onDeleteNode,
-  onToggleActive, onTogglePin, onToggleSensitive, onSetPosition, onEditRequest,
+  onToggleActive, onTogglePin, onToggleSensitive, onSetPosition, onEditRequest, onUpdate,
   projects, conversations, groups, groupFilter, conversationFilter,
   onUpdateProject, focusNodeId, onFocusConsumed, focusGroupId, onFocusGroupConsumed,
 }: Props) {
@@ -347,7 +348,7 @@ export function Canvas({
               onTogglePin={onTogglePin}
               onToggleSensitive={onToggleSensitive}
               onDelete={id => { onDeleteNode(id) }}
-              onEditRequest={onEditRequest}
+              onUpdate={onUpdate}
             />
           )
         })}

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap,
   Bot, Sparkles, Lock, Pin,
@@ -31,18 +32,113 @@ function timeStr(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+interface ItemProps {
+  node: MentalModelNode
+  onEditRequest: (id: string) => void
+  onUpdate?: (id: string, data: { title: string }) => void
+}
+
+function TimelineItem({ node, onEditRequest, onUpdate }: ItemProps) {
+  const decay = computeDecayScore(node)
+  const isUnconfirmed = node.provenance === 'agent' && !node.confirmed
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(node.title)
+
+  function commitTitle() {
+    setEditingTitle(false)
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== node.title) onUpdate?.(node.id, { title: trimmed })
+    else setTitleDraft(node.title)
+  }
+
+  return (
+    <button
+      onClick={() => onEditRequest(node.id)}
+      className={cn(
+        'w-full flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors group',
+        't-card/50 hover:t-card border border-transparent hover:t-border',
+        !node.active && 'opacity-40',
+        isUnconfirmed && 'border-l-2 border-l-amber-400/50',
+      )}
+    >
+      {/* Time */}
+      <span className="text-[10px] t-muted tabular-nums mt-0.5 shrink-0 w-10 text-right">
+        {timeStr(node.createdAt)}
+      </span>
+
+      {/* Category dot on the track */}
+      <div className={cn(
+        'h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border',
+        CATEGORY_COLORS[node.category],
+      )}>
+        {CATEGORY_ICONS[node.category]}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={e => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitTitle() }
+                if (e.key === 'Escape') { setEditingTitle(false); setTitleDraft(node.title) }
+              }}
+              onClick={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+              className="text-sm font-medium t-text bg-transparent outline-none border-b border-white/40 min-w-0 w-full"
+            />
+          ) : (
+            <span
+              className="text-sm font-medium t-text truncate cursor-text"
+              onClick={e => e.stopPropagation()}
+              onDoubleClick={e => { e.stopPropagation(); setTitleDraft(node.title); setEditingTitle(true) }}
+              title="Double-click to edit"
+            >
+              {node.title}
+            </span>
+          )}
+          {node.pinned && <Pin className="h-3 w-3 text-amber-400 shrink-0" fill="currentColor" />}
+          {node.sensitive && <Lock className="h-3 w-3 text-orange-400 shrink-0" />}
+          {node.provenance === 'agent' && <Bot className={cn('h-3 w-3 shrink-0', isUnconfirmed ? 'text-amber-400' : 'text-blue-400/60')} />}
+          {node.provenance === 'extracted' && <Sparkles className="h-3 w-3 text-purple-400/60 shrink-0" />}
+          <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
+        </div>
+        <p className="text-xs t-muted mt-0.5 line-clamp-1">{node.content}</p>
+      </div>
+
+      {/* Mini decay bar */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1.5 shrink-0 mt-1 cursor-help">
+            <div className="w-12 h-1 rounded-full bg-white/8 overflow-hidden">
+              <div className={cn('h-full rounded-full', decayBarColor(decay))}
+                style={{ width: `${decay * 100}%` }} />
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <span className="font-bold">R:</span> {decayLabel(decay)} ({Math.round(decay * 100)}%)
+        </TooltipContent>
+      </Tooltip>
+    </button>
+  )
+}
+
 interface Props {
   nodes: MentalModelNode[]
   onEditRequest: (id: string) => void
+  onUpdate?: (id: string, data: { title: string }) => void
 }
 
-export function Timeline({ nodes, onEditRequest }: Props) {
-  // Sort by createdAt descending (newest first)
+export function Timeline({ nodes, onEditRequest, onUpdate }: Props) {
   const sorted = [...nodes].sort((a, b) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
 
-  // Group by date
   const groups: Array<{ label: string; items: MentalModelNode[] }> = []
   for (const node of sorted) {
     const label = formatDate(node.createdAt)
@@ -75,67 +171,11 @@ export function Timeline({ nodes, onEditRequest }: Props) {
 
           {/* Timeline items */}
           <div className="relative">
-            {/* Vertical track */}
             <div className="absolute left-[39px] top-0 bottom-0 w-px bg-white/8" />
-
             <div className="space-y-1">
-              {group.items.map(node => {
-                const decay = computeDecayScore(node)
-                const isUnconfirmed = node.provenance === 'agent' && !node.confirmed
-                return (
-                  <button
-                    key={node.id}
-                    onClick={() => onEditRequest(node.id)}
-                    className={cn(
-                      'w-full flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors group',
-                      't-card/50 hover:t-card border border-transparent hover:t-border',
-                      !node.active && 'opacity-40',
-                      isUnconfirmed && 'border-l-2 border-l-amber-400/50',
-                    )}
-                  >
-                    {/* Time */}
-                    <span className="text-[10px] t-muted tabular-nums mt-0.5 shrink-0 w-10 text-right">
-                      {timeStr(node.createdAt)}
-                    </span>
-
-                    {/* Category dot on the track */}
-                    <div className={cn(
-                      'h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border',
-                      CATEGORY_COLORS[node.category],
-                    )}>
-                      {CATEGORY_ICONS[node.category]}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-sm font-medium t-text truncate">{node.title}</span>
-                        {node.pinned && <Pin className="h-3 w-3 text-amber-400 shrink-0" fill="currentColor" />}
-                        {node.sensitive && <Lock className="h-3 w-3 text-orange-400 shrink-0" />}
-                        {node.provenance === 'agent' && <Bot className={cn('h-3 w-3 shrink-0', isUnconfirmed ? 'text-amber-400' : 'text-blue-400/60')} />}
-                        {node.provenance === 'extracted' && <Sparkles className="h-3 w-3 text-purple-400/60 shrink-0" />}
-                        <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
-                      </div>
-                      <p className="text-xs t-muted mt-0.5 line-clamp-1">{node.content}</p>
-                    </div>
-
-                    {/* Mini decay bar */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5 shrink-0 mt-1 cursor-help">
-                          <div className="w-12 h-1 rounded-full bg-white/8 overflow-hidden">
-                            <div className={cn('h-full rounded-full', decayBarColor(decay))}
-                              style={{ width: `${decay * 100}%` }} />
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <span className="font-bold">R:</span> {decayLabel(decay)} ({Math.round(decay * 100)}%)
-                      </TooltipContent>
-                    </Tooltip>
-                  </button>
-                )
-              })}
+              {group.items.map(node => (
+                <TimelineItem key={node.id} node={node} onEditRequest={onEditRequest} onUpdate={onUpdate} />
+              ))}
             </div>
           </div>
         </div>

@@ -26,15 +26,24 @@ interface Props {
   onTogglePin: (id: string) => void
   onToggleSensitive?: (id: string) => void
   onDelete: (id: string) => void
-  onEditRequest: (id: string) => void
+  onUpdate?: (id: string, data: { title?: string }) => void
 }
 
 export function CanvasNode({
   node, position, selected, groupColor,
-  onMouseDown, onToggleActive, onTogglePin, onToggleSensitive, onDelete, onEditRequest,
+  onMouseDown, onToggleActive, onTogglePin, onToggleSensitive, onDelete, onUpdate,
 }: Props) {
   const decay = computeDecayScore(node)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(node.title)
+
+  function commitTitle() {
+    setEditingTitle(false)
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== node.title) onUpdate?.(node.id, { title: trimmed })
+    else setTitleDraft(node.title)
+  }
 
   return (
     <div
@@ -54,14 +63,33 @@ export function CanvasNode({
           : undefined,
       }}
       onMouseDown={e => onMouseDown(e, node.id)}
-      onDoubleClick={e => { e.stopPropagation(); onEditRequest(node.id) }}
     >
       {/* Colored title bar */}
       <div className={cn('flex flex-col px-3 py-1.5 border-b shrink-0', CATEGORY_COLORS[node.category])}>
         {/* Row 1: category icon + node title + status icons + 3-dots */}
         <div className="flex items-center gap-1.5">
           <span className="shrink-0">{CATEGORY_ICONS[node.category]}</span>
-          <span className="text-[11px] font-semibold leading-none flex-1 truncate">{node.title}</span>
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={e => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitTitle() }
+                if (e.key === 'Escape') { setEditingTitle(false); setTitleDraft(node.title) }
+              }}
+              onMouseDown={e => e.stopPropagation()}
+              className="flex-1 min-w-0 bg-transparent text-[11px] font-semibold leading-none outline-none border-b border-white/40"
+            />
+          ) : (
+            <span
+              className="text-[11px] font-semibold leading-none flex-1 truncate cursor-text"
+              onDoubleClick={e => { e.stopPropagation(); setTitleDraft(node.title); setEditingTitle(true) }}
+            >
+              {node.title}
+            </span>
+          )}
 
           {/* Active-state status icons */}
           <div className="flex items-center gap-0.5 shrink-0">
