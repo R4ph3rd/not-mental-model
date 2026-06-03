@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import {
-  Eye, EyeOff, Pin, Edit2, Trash2, Link, ChevronDown, ChevronUp,
+  Eye, EyeOff, Pin, Trash2, Link, ChevronDown, ChevronUp,
   Lock, Unlock, Bot, Sparkles, Check, ArrowUpCircle, X,
   FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap,
 } from 'lucide-react'
@@ -188,11 +188,6 @@ export function NodeCard({
             <TooltipContent>{node.active ? 'Hide from agent' : 'Show to agent'}</TooltipContent>
           </Tooltip>
 
-          <button
-            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-            onClick={e => { e.stopPropagation(); onEditRequest(node.id) }}>
-            <Edit2 className="h-3 w-3" />
-          </button>
           <button
             className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:text-red-300 hover:!opacity-100 transition-opacity"
             onClick={e => { e.stopPropagation(); onDelete(node.id) }}>
