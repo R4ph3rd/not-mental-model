@@ -32,12 +32,11 @@ export function CanvasNode({
   onMouseDown, onToggleActive, onTogglePin, onDelete, onEditRequest,
 }: Props) {
   const decay = computeDecayScore(node)
-  const tint = groupColor ? groupColor.replace(')', ' / 0.08)') : undefined
 
   return (
     <div
       className={cn(
-        'absolute rounded-xl border flex flex-col select-none',
+        'absolute rounded-xl border flex flex-col select-none overflow-hidden',
         'cursor-grab active:cursor-grabbing t-card',
         'transition-shadow duration-150',
         selected
@@ -45,7 +44,11 @@ export function CanvasNode({
           : 't-border hover:border-white/25',
         !node.active && 'opacity-45',
       )}
-      style={{ left: position.x, top: position.y, width: CARD_W, backgroundColor: tint }}
+      style={{
+        left: position.x, top: position.y, width: CARD_W,
+        borderLeftColor: groupColor ?? undefined,
+        borderLeftWidth: groupColor ? '3px' : undefined,
+      }}
       onMouseDown={e => onMouseDown(e, node.id)}
       onDoubleClick={e => { e.stopPropagation(); onEditRequest(node.id) }}
     >
