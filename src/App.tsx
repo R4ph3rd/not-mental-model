@@ -35,15 +35,14 @@ export default function App() {
     toggleActive, togglePin, confirmNode, setPosition,
     importNodes, addSummaryNode,
     projects, addProject, updateProject, deleteProject,
-    conversations, addConversation,
+    conversations, addConversation, updateConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
   } = useMentalModelStore()
 
   const [view, setView]                             = useState<View>('canvas')
   const [categoryFilter, setCategoryFilter]         = useState<NodeCategory | 'all'>('all')
-  const [projectFilter, setProjectFilter]           = useState<string | null>(null)
-  const [conversationFilter, setConversationFilter] = useState<string | null>(null)
   const [groupFilter, setGroupFilter]               = useState<string | null>(null)
+  const [conversationFilter, setConversationFilter] = useState<string | null>(null)
   const [search, setSearch]                         = useState('')
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [addOpen, setAddOpen]           = useState(false)
@@ -74,8 +73,8 @@ export default function App() {
     setCanvasFocusGroupId(id)
   }
 
-  function handleSidebarAddNode(ctx: { projectId?: string; conversationId?: string; groupId?: string }) {
-    if (ctx.projectId)     setProjectFilter(ctx.projectId)
+  function handleSidebarAddNode(ctx: { groupId?: string; conversationId?: string }) {
+    if (ctx.groupId) setGroupFilter(ctx.groupId)
     if (ctx.conversationId) setConversationFilter(ctx.conversationId)
     setAddOpen(true)
   }
@@ -140,8 +139,7 @@ export default function App() {
   const filtered = useMemo(() => {
     let list = nodes
     if (conversationFilter) list = list.filter(n => n.conversationIds.includes(conversationFilter))
-    else if (projectFilter) list = list.filter(n => n.projectId === projectFilter)
-    if (groupFilter) list = list.filter(n => n.groupIds.includes(groupFilter))
+    else if (groupFilter) list = list.filter(n => n.projectId === groupFilter || n.groupIds.includes(groupFilter))
     if (categoryFilter !== 'all') list = list.filter(n => n.category === categoryFilter)
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -152,7 +150,7 @@ export default function App() {
       )
     }
     return list
-  }, [nodes, categoryFilter, projectFilter, conversationFilter, groupFilter, search])
+  }, [nodes, categoryFilter, conversationFilter, groupFilter, search])
 
   const activeCount   = useMemo(() => nodes.filter(isNodeVisibleToAgent).length, [nodes, inactiveGroupIds])
   const selectedNodes = useMemo(() => nodes.filter(n => selectedIds.has(n.id)), [nodes, selectedIds])
@@ -198,8 +196,8 @@ export default function App() {
 
   // Chat / inference: auto-extracts nodes (Governance paper: provenance = 'agent')
   function handleAgentNodes(raw: Array<{ title: string; content: string; category: NodeCategory; confidence: 'high' | 'medium' | 'low' }>) {
-    // Determine target project: explicit filter, or majority project of selected nodes
-    let targetProject = projectFilter ?? undefined
+    // target project = current group filter if it maps to a project
+    let targetProject = groupFilter && projects.some(p => p.id === groupFilter) ? groupFilter : undefined
     if (!targetProject && inferMode === 'from-selection') {
       const counts: Record<string, number> = {}
       for (const n of selectedNodes) if (n.projectId) counts[n.projectId] = (counts[n.projectId] ?? 0) + 1
@@ -213,6 +211,17 @@ export default function App() {
         scope: '', importance: 0.7,
         provenance: 'agent', confirmed: false, sensitive: false,
       }, targetProject, targetConvs)
+    }
+  }
+
+  function handleMoveNodeToGroup(nodeId: string, groupId: string) {
+    const node = nodes.find(n => n.id === nodeId)
+    if (!node) return
+    const isProject = projects.some(p => p.id === groupId)
+    if (isProject) {
+      updateNode(nodeId, { projectId: groupId })
+    } else {
+      updateNode(nodeId, { groupIds: [...new Set([...node.groupIds, groupId])] })
     }
   }
 
@@ -239,31 +248,29 @@ export default function App() {
           nodes={nodes}
           activeCount={activeCount}
           categoryFilter={categoryFilter}
-          projectFilter={projectFilter}
-          conversationFilter={conversationFilter}
           groupFilter={groupFilter}
+          conversationFilter={conversationFilter}
+          selectedNodeIds={selectedIds}
           projects={projects}
           conversations={conversations}
           groups={groups}
           onCategoryFilter={f => { setCategoryFilter(f); setSelectedIds(new Set()) }}
-          onProjectFilter={id => { setProjectFilter(id); setConversationFilter(null); setSelectedIds(new Set()) }}
+          onGroupFilter={id => { setGroupFilter(id); setConversationFilter(null); setSelectedIds(new Set()) }}
           onConversationFilter={id => { setConversationFilter(id); setSelectedIds(new Set()) }}
-          onGroupFilter={id => { setGroupFilter(id); setSelectedIds(new Set()) }}
-          onAddProject={name => addProject(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`)}
+          onAddGroup={name => addProject(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`)}
+          onAddSubGroup={(name, parentId) => addGroup(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`, parentId)}
           onAddConversation={(pid, title) => { addConversation(pid, title); setChatOpen(true) }}
-          onAddGroup={(name, parentId) => addGroup(name, `hsl(${Math.floor(Math.random() * 360)} 65% 58%)`, parentId)}
+          onUpdateGroup={(id, data) => { updateProject(id, data); updateGroup(id, data) }}
+          onUpdateConversation={updateConversation}
+          onDeleteGroup={id => { deleteProject(id); deleteGroup(id) }}
           onToggleGroupActive={toggleGroupActive}
-          onUpdateProject={updateProject}
-          onUpdateGroup={updateGroup}
-          selectedNodeIds={selectedIds}
           onAddNode={handleSidebarAddNode}
           onFocusNode={handleFocusNode}
           onFocusGroup={handleFocusGroup}
           onEditNode={id => setInspectorId(id)}
           onDeleteNode={id => { deleteNode(id); setSelectedIds(p => { const n = new Set(p); n.delete(id); return n }) }}
           onDuplicateNode={handleDuplicateNode}
-          onDeleteProject={deleteProject}
-          onDeleteGroup={deleteGroup}
+          onMoveNodeToGroup={handleMoveNodeToGroup}
         />
 
         {/* ── Main column ───────────────────────────────── */}
@@ -388,7 +395,7 @@ export default function App() {
                     projects={projects}
                     conversations={conversations}
                     groups={groups}
-                    projectFilter={projectFilter}
+                    groupFilter={groupFilter}
                     conversationFilter={conversationFilter}
                     onUpdateProject={updateProject}
                     focusNodeId={canvasFocusId}
@@ -465,7 +472,14 @@ export default function App() {
             <p className="text-sm font-semibold t-text mb-1">Add node</p>
             <NodeForm
               onSubmit={data => {
-                addNode(data, projectFilter ?? undefined, conversationFilter ? [conversationFilter] : undefined)
+                const gid = groupFilter ?? undefined
+                const targetProjectId = gid && projects.some(p => p.id === gid) ? gid : undefined
+                const extraGroupIds   = gid && !targetProjectId ? [gid] : []
+                addNode(
+                  { ...data, groupIds: [...new Set([...(data.groupIds ?? []), ...extraGroupIds])] },
+                  targetProjectId,
+                  conversationFilter ? [conversationFilter] : undefined,
+                )
                 setAddOpen(false)
               }}
               onCancel={() => setAddOpen(false)}

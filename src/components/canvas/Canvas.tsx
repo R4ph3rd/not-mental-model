@@ -21,7 +21,7 @@ interface Props {
   projects?: Project[]
   conversations?: Conversation[]
   groups?: MemoryGroup[]
-  projectFilter?: string | null
+  groupFilter?: string | null
   conversationFilter?: string | null
   onUpdateProject?: (id: string, data: { name?: string; color?: string }) => void
   focusNodeId?: string | null
@@ -54,7 +54,7 @@ export function Canvas({
   nodes, selectedIds,
   onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onSetPosition, onEditRequest,
-  projects, conversations, groups, projectFilter, conversationFilter,
+  projects, conversations, groups, groupFilter, conversationFilter,
   onUpdateProject, focusNodeId, onFocusConsumed, focusGroupId, onFocusGroupConsumed,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -283,10 +283,10 @@ export function Canvas({
       return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
     }
 
-    if (projectFilter) {
-      const proj = projects.find(p => p.id === projectFilter)
+    if (groupFilter) {
+      const proj = projects.find(p => p.id === groupFilter)
       if (!proj) return []
-      const projConvs = conversations?.filter(c => c.projectId === projectFilter) ?? []
+      const projConvs = conversations?.filter(c => c.projectId === groupFilter) ?? []
       return projConvs.flatMap(conv => {
         const ids = nodes.filter(n => n.conversationIds.includes(conv.id)).map(n => n.id)
         const bounds = boundsFor(ids)
@@ -301,7 +301,7 @@ export function Canvas({
       if (!bounds) return []
       return [{ id: proj.id, label: proj.name, color: proj.color, nodeCount: ids.length, bounds, isConversation: false as const, memberIds: ids }]
     })
-  }, [showAreas, projects, conversations, projectFilter, conversationFilter, nodes, livePositions])
+  }, [showAreas, projects, conversations, groupFilter, conversationFilter, nodes, livePositions])
 
   return (
     <div
