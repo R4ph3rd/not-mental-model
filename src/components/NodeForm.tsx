@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ChevronDown, Check } from 'lucide-react'
 import type { MentalModelNode, NodeCategory, ConfidenceLevel, MemoryType } from '@/types/mental-model'
 import { CATEGORY_LABELS } from '@/types/mental-model'
 import type { NodeFormData } from '@/store/mental-model-store'
@@ -12,22 +13,96 @@ interface Props {
   onSubmit: (data: NodeFormData) => void
   onCancel: () => void
   extraActions?: React.ReactNode
+  hideTitle?: boolean
 }
 
 const CATEGORIES   = Object.entries(CATEGORY_LABELS) as [NodeCategory, string][]
-const CONFIDENCES: [ConfidenceLevel, string][] = [['high', 'High'], ['medium', 'Medium'], ['low', 'Low']]
-const MEMORY_TYPES: [MemoryType, string][] = [
-  ['semantic',  'Semantic — abstracted fact'],
-  ['episodic',  'Episodic — specific event'],
-]
 const SCOPES   = ['', 'Work', 'Personal', 'Skills', 'Goals', 'Research', 'Side projects']
-const SOURCES  = ['', 'direct', 'conversation', 'observed', 'inferred', 'claude.ai', 'chatgpt', 'claude-summary']
+
+const CONFIDENCE_OPTIONS: { value: ConfidenceLevel; label: string }[] = [
+  { value: 'high',   label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low',    label: 'Low' },
+]
+
+const MEMORY_TYPE_OPTIONS: { value: MemoryType; label: string }[] = [
+  { value: 'semantic', label: 'Semantic' },
+  { value: 'episodic', label: 'Episodic' },
+]
+
+const SOURCE_OPTIONS: { value: string; label: string }[] = [
+  { value: '',                label: 'Unknown' },
+  { value: 'direct',         label: 'Direct' },
+  { value: 'conversation',   label: 'Conversation' },
+  { value: 'observed',       label: 'Observed' },
+  { value: 'inferred',       label: 'Inferred' },
+  { value: 'claude.ai',      label: 'claude.ai' },
+  { value: 'chatgpt',        label: 'ChatGPT' },
+  { value: 'claude-summary', label: 'Summary' },
+]
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="block text-[10px] uppercase tracking-widest t-muted mb-1.5">{children}</label>
 }
 
-export function NodeForm({ node, onSubmit, onCancel, extraActions }: Props) {
+// ─── PillSelect ────────────────────────────────────────────────────────────────
+
+interface PillOption<T extends string> { value: T; label: string }
+
+interface PillSelectProps<T extends string> {
+  value: T
+  options: PillOption<T>[]
+  onChange: (v: T) => void
+}
+
+export function PillSelect<T extends string>({ value, options, onChange }: PillSelectProps<T>) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = options.find(o => o.value === value) ?? options[0]
+
+  useEffect(() => {
+    if (!open) return
+    function close(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border t-border bg-white/[0.04] t-text hover:bg-white/[0.08] transition-colors"
+      >
+        {current.label}
+        <ChevronDown className="h-3 w-3 t-muted" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-50 min-w-[130px] rounded-lg border t-border t-sidebar shadow-xl overflow-hidden">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-[11px] t-text hover:bg-white/[0.06] transition-colors"
+            >
+              <span className="w-3 shrink-0">
+                {opt.value === value && <Check className="h-3 w-3 t-accent" />}
+              </span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+export function NodeForm({ node, onSubmit, onCancel, extraActions, hideTitle }: Props) {
   const [category,   setCategory]   = useState<NodeCategory>(node?.category ?? 'fact')
   const [title,      setTitle]      = useState(node?.title ?? '')
   const [content,    setContent]    = useState(node?.content ?? '')
@@ -40,7 +115,7 @@ export function NodeForm({ node, onSubmit, onCancel, extraActions }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim()) return
+    if (!hideTitle && !title.trim()) return
     onSubmit({
       category, confidence, memoryType,
       title:   title.trim(),
@@ -67,21 +142,18 @@ export function NodeForm({ node, onSubmit, onCancel, extraActions }: Props) {
         </div>
         <div>
           <Label>Memory type</Label>
-          <Select value={memoryType} onValueChange={v => setMemoryType(v as MemoryType)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {MEMORY_TYPES.map(([val, label]) => <SelectItem key={val} value={val}>{label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <PillSelect value={memoryType} options={MEMORY_TYPE_OPTIONS} onChange={setMemoryType} />
         </div>
       </div>
 
       {/* Title */}
-      <div>
-        <Label>Title</Label>
-        <Input value={title} onChange={e => setTitle(e.target.value)}
-          placeholder="Short, descriptive label" autoFocus />
-      </div>
+      {!hideTitle && (
+        <div>
+          <Label>Title</Label>
+          <Input value={title} onChange={e => setTitle(e.target.value)}
+            placeholder="Short, descriptive label" autoFocus />
+        </div>
+      )}
 
       {/* Content — expandable */}
       <div>
@@ -108,12 +180,7 @@ export function NodeForm({ node, onSubmit, onCancel, extraActions }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Confidence</Label>
-          <Select value={confidence} onValueChange={v => setConfidence(v as ConfidenceLevel)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CONFIDENCES.map(([val, label]) => <SelectItem key={val} value={val}>{label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <PillSelect value={confidence} options={CONFIDENCE_OPTIONS} onChange={setConfidence} />
         </div>
         <div>
           <Label>Scope</Label>
@@ -131,13 +198,7 @@ export function NodeForm({ node, onSubmit, onCancel, extraActions }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Source</Label>
-          <Select value={source || '_none'} onValueChange={v => setSource(v === '_none' ? '' : v)}>
-            <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_none">None</SelectItem>
-              {SOURCES.filter(Boolean).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <PillSelect value={source} options={SOURCE_OPTIONS} onChange={setSource} />
         </div>
         <div>
           <Label>
@@ -166,7 +227,7 @@ export function NodeForm({ node, onSubmit, onCancel, extraActions }: Props) {
         {extraActions}
         <div className="flex gap-2 ml-auto">
           <Button type="button" variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" size="sm" disabled={!title.trim()}>
+          <Button type="submit" size="sm" disabled={!hideTitle && !title.trim()}>
             {node ? 'Save changes' : 'Add node'}
           </Button>
         </div>
