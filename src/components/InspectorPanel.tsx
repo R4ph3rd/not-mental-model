@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, MessageSquare, Plus, Trash2 } from 'lucide-react'
+import { X, MessageSquare, Plus, Trash2, Pin, Lock, Unlock, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PillSelect, TagInput } from '@/components/NodeForm'
 import { CATEGORY_LABELS } from '@/types/mental-model'
@@ -13,6 +13,8 @@ interface Props {
   onClose: () => void
   onUpdate: (id: string, data: Partial<NodeFormData> & { conversationIds?: string[] }) => void
   onDelete: (id: string) => void
+  onToggleActive?: (id: string) => void
+  onTogglePin?: (id: string) => void
 }
 
 // ─── Category color maps ────────────────────────────────────────────────────
@@ -80,7 +82,7 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelete }: Props) {
+export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelete, onToggleActive, onTogglePin }: Props) {
   const [showConvPicker, setShowConvPicker] = useState(false)
   const [editingTitle, setEditingTitle]     = useState(false)
   const [titleDraft, setTitleDraft]         = useState('')
@@ -286,14 +288,41 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
 
         <Divider />
 
-        {/* Delete */}
-        <div className="px-4 py-4">
+        {/* Actions row */}
+        <div className="px-4 py-4 flex items-center gap-2">
+          {/* Pin / active / sensitive toggles */}
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="ghost"
+              className={cn('h-7 w-7', n.pinned ? 'text-amber-300' : 't-muted hover:t-text')}
+              title={n.pinned ? 'Unpin' : 'Pin (prevent decay)'}
+              onClick={() => onTogglePin?.(n.id)}
+            >
+              <Pin className="h-3.5 w-3.5" fill={n.pinned ? 'currentColor' : 'none'} />
+            </Button>
+            <Button size="icon" variant="ghost"
+              className={cn('h-7 w-7', !n.active ? 'text-red-300' : 't-muted hover:t-text')}
+              title={n.active ? 'Hide from agent' : 'Show to agent'}
+              onClick={() => onToggleActive?.(n.id)}
+            >
+              {n.active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            </Button>
+            <Button size="icon" variant="ghost"
+              className={cn('h-7 w-7', n.sensitive ? 'text-orange-300' : 't-muted hover:t-text')}
+              title={n.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}
+              onClick={() => upd('sensitive', !n.sensitive)}
+            >
+              {n.sensitive ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+            </Button>
+          </div>
+
+          <div className="flex-1" />
+
           <Button
-            variant="destructive" size="sm" className="w-full"
+            variant="destructive" size="sm"
             onClick={() => { onDelete(n.id); onClose() }}
           >
             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-            Delete memory
+            Delete
           </Button>
         </div>
 
