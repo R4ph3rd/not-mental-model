@@ -248,7 +248,7 @@ export function NodeCard({
         <div className="px-3 pb-2 flex items-center gap-1.5 flex-wrap">
           <Link className="h-3 w-3 t-muted shrink-0" />
           {linkedNodes.map(ln => (
-            <span key={ln.id} className="text-[10px] t-muted border t-border rounded px-1.5 py-0.5 t-card">{ln.title}</span>
+            <span key={ln.id} className="text-[10px] t-muted border t-border rounded-full px-2 py-0.5 t-card">{ln.title}</span>
           ))}
         </div>
       )}

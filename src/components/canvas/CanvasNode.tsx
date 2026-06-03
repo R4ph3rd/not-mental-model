@@ -114,14 +114,14 @@ export function CanvasNode({
       {node.tags.length > 0 && (
         <div className="px-3 pb-2 flex flex-wrap gap-1">
           {node.tags.slice(0, 3).map(t => (
-            <span key={t} className="text-[9px] t-muted border t-border rounded px-1 py-0.5">#{t}</span>
+            <span key={t} className="text-[9px] t-muted border t-border rounded-full px-1.5 py-0.5">#{t}</span>
           ))}
         </div>
       )}
 
       {/* Memory type + scope */}
       <div className="px-3 pb-2 flex items-center gap-1.5 text-[9px]">
-        <span className={cn('px-1 py-0.5 rounded border',
+        <span className={cn('px-1.5 py-0.5 rounded-full border',
           node.memoryType === 'episodic'
             ? 'border-violet-500/30 text-violet-400/70'
             : 'border-teal-500/30 text-teal-400/70')}>
