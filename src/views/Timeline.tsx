@@ -2,7 +2,8 @@ import {
   FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap,
   Bot, Sparkles, Lock, Pin,
 } from 'lucide-react'
-import { computeDecayScore, decayBarColor } from '@/lib/decay'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
 import { CATEGORY_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import { cn } from '@/lib/utils'
@@ -62,6 +63,12 @@ export function Timeline({ nodes, onEditRequest }: Props) {
           <div className="flex items-center gap-3 mb-2">
             <p className="text-[11px] font-semibold t-muted uppercase tracking-wider shrink-0">{group.label}</p>
             <div className="flex-1 h-px t-border" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[10px] font-bold t-muted uppercase tracking-wider shrink-0 cursor-help">R</p>
+              </TooltipTrigger>
+              <TooltipContent>Retention: recency × 0.4 + importance × 0.35 + confidence × 0.25</TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Timeline items */}
@@ -111,12 +118,19 @@ export function Timeline({ nodes, onEditRequest }: Props) {
                     </div>
 
                     {/* Mini decay bar */}
-                    <div className="flex items-center gap-1.5 shrink-0 mt-1">
-                      <div className="w-12 h-1 rounded-full bg-white/8 overflow-hidden">
-                        <div className={cn('h-full rounded-full', decayBarColor(decay))}
-                          style={{ width: `${decay * 100}%` }} />
-                      </div>
-                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5 shrink-0 mt-1 cursor-help">
+                          <div className="w-12 h-1 rounded-full bg-white/8 overflow-hidden">
+                            <div className={cn('h-full rounded-full', decayBarColor(decay))}
+                              style={{ width: `${decay * 100}%` }} />
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span className="font-bold">R:</span> {decayLabel(decay)} ({Math.round(decay * 100)}%)
+                      </TooltipContent>
+                    </Tooltip>
                   </button>
                 )
               })}

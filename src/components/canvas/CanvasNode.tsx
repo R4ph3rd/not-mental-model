@@ -156,7 +156,9 @@ export function CanvasNode({
               <div className={cn('h-full rounded-full', decayBarColor(decay))}
                 style={{ width: `${decay * 100}%` }} />
             </div>
-            <p className="text-[9px] t-muted mt-0.5">{decayLabel(decay)} · {Math.round(decay * 100)}%</p>
+            <p className="text-[9px] t-muted mt-0.5">
+              <span className="font-bold">R:</span> {decayLabel(decay)}
+            </p>
           </div>
         </TooltipTrigger>
         <TooltipContent>
