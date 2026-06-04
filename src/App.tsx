@@ -373,13 +373,11 @@ export default function App() {
                         <p className="text-sm">{search ? 'No nodes match your search' : 'No nodes yet'}</p>
                       </div>
                     ) : gridSections ? (
-                      <div className="space-y-6">
-                        {gridSections.map(section => (
-                          <div key={section.id}
-                            className="rounded-xl p-3 border border-white/[0.06]"
-                            style={section.color ? { backgroundColor: `${section.color}0d` } : undefined}
-                          >
-                            <div className="flex items-center gap-2 mb-3 px-1">
+                      <div className="space-y-0">
+                        {gridSections.map((section, idx) => (
+                          <div key={section.id}>
+                            {idx > 0 && <div className="border-t t-border my-6" />}
+                            <div className="flex items-center gap-2 mb-3">
                               <FolderOpen className="h-4 w-4 shrink-0" style={{ color: section.color || undefined }} />
                               <span className="text-sm font-semibold t-text">{section.name}</span>
                               <span className="text-[11px] t-muted">({section.items.length})</span>
