@@ -433,9 +433,11 @@ export default function App() {
                         <Bot className="h-3.5 w-3.5 t-accent" />Infer
                       </Button>
                     )}
-                    <Button size="sm" variant="destructive" onClick={() => {
-                      for (const id of selectedIds) deleteNode(id); setSelectedIds(new Set())
-                    }}>
+                    <Button size="sm" variant="outline"
+                      className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300"
+                      onClick={() => {
+                        for (const id of selectedIds) deleteNode(id); setSelectedIds(new Set())
+                      }}>
                       <Trash2 className="h-3.5 w-3.5" />Delete
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
