@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Eye, EyeOff, Pin, Trash2, Lock, Unlock, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap, MoreVertical, Bot } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Eye, EyeOff, Pin, Trash2, Lock, Unlock, Briefcase, MessageSquare, BookOpen, Heart, Target, Zap, MoreVertical, Bot } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
@@ -8,9 +8,9 @@ import { CARD_W } from './layout'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
-  project:      <FolderKanban className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  project:      <Briefcase className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   conversation: <MessageSquare className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
-  fact:         <Lightbulb className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  fact:         <BookOpen className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   preference:   <Heart className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   goal:         <Target className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   skill:        <Zap className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
@@ -40,6 +40,17 @@ export function CanvasNode({
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(node.title)
   const isUnconfirmed = node.provenance === 'agent' && !node.confirmed
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close menu on outside click — uses document listener to avoid z-index/transform issues
+  useEffect(() => {
+    if (!menuOpen) return
+    function close(e: MouseEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [menuOpen])
 
   function commitTitle() {
     setEditingTitle(false)
@@ -68,10 +79,10 @@ export function CanvasNode({
       onMouseDown={e => onMouseDown(e, node.id)}
     >
       {/* Colored title bar */}
-      <div className={cn('flex flex-col px-3 py-1.5 border-b shrink-0', CATEGORY_COLORS[node.category])}>
-        {/* Row 1: category icon + node title + 3-dots */}
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0">{CATEGORY_ICONS[node.category]}</span>
+      <div className={cn('relative flex flex-col px-3 py-1.5 border-b shrink-0', CATEGORY_COLORS[node.category])}>
+        {/* Row 1: category icon + wrappable title (pr-5 to leave room for 3-dots) */}
+        <div className="flex items-start gap-1.5 pr-5">
+          <span className="shrink-0 mt-0.5">{CATEGORY_ICONS[node.category]}</span>
           {editingTitle ? (
             <input
               autoFocus
@@ -87,67 +98,62 @@ export function CanvasNode({
             />
           ) : (
             <span
-              className="text-[11px] font-semibold leading-snug flex-1 truncate cursor-text"
+              className="text-[11px] font-semibold leading-snug flex-1 min-w-0 break-words cursor-text"
               onDoubleClick={e => { e.stopPropagation(); setTitleDraft(node.title); setEditingTitle(true) }}
             >
               {node.title}
             </span>
           )}
+        </div>
 
-          {/* 3-dots menu */}
-          <div className="relative shrink-0">
-            <button
-              className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+        {/* Absolute 3-dots at top-right with bg to cover text behind it */}
+        <div ref={menuRef} className="absolute top-1 right-1.5 z-10">
+          <button
+            className="h-5 w-5 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity"
+            style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+          >
+            <MoreVertical className="h-3 w-3" />
+          </button>
+
+          {menuOpen && (
+            <div
+              className="absolute right-0 top-6 z-50 rounded-lg border t-border shadow-xl py-1 min-w-[160px]"
+              style={{ backgroundColor: 'rgb(var(--bg-card))' }}
               onMouseDown={e => e.stopPropagation()}
-              onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
             >
-              <MoreVertical className="h-3 w-3" />
-            </button>
-
-            {menuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onMouseDown={e => { e.stopPropagation(); setMenuOpen(false) }}
-                />
-                <div
-                  className="absolute right-0 top-6 z-50 rounded-lg border t-border shadow-xl py-1 min-w-[160px]"
-                  style={{ backgroundColor: 'rgb(var(--bg-card))' }}
-                  onMouseDown={e => e.stopPropagation()}
-                >
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
-                    onClick={e => { e.stopPropagation(); onTogglePin(node.id); setMenuOpen(false) }}
-                  >
-                    <Pin className="h-3 w-3 shrink-0" fill={node.pinned ? 'currentColor' : 'none'} />
-                    {node.pinned ? 'Unpin' : 'Pin to retain'}
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
-                    onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id); setMenuOpen(false) }}
-                  >
-                    {node.sensitive ? <Unlock className="h-3 w-3 shrink-0" /> : <Lock className="h-3 w-3 shrink-0" />}
-                    {node.sensitive ? 'Remove sensitive' : 'Mark as sensitive'}
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
-                    onClick={e => { e.stopPropagation(); onToggleActive(node.id); setMenuOpen(false) }}
-                  >
-                    {node.active ? <Eye className="h-3 w-3 shrink-0" /> : <EyeOff className="h-3 w-3 shrink-0" />}
-                    {node.active ? 'Hide from agent' : 'Show to agent'}
-                  </button>
-                  <div className="h-px bg-white/10 my-1" />
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left text-red-400"
-                    onClick={e => { e.stopPropagation(); onDelete(node.id); setMenuOpen(false) }}
-                  >
-                    <Trash2 className="h-3 w-3 shrink-0" />
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
+                onClick={e => { e.stopPropagation(); onTogglePin(node.id); setMenuOpen(false) }}
+              >
+                <Pin className="h-3 w-3 shrink-0" fill={node.pinned ? 'currentColor' : 'none'} />
+                {node.pinned ? 'Unpin' : 'Pin to retain'}
+              </button>
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
+                onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id); setMenuOpen(false) }}
+              >
+                {node.sensitive ? <Unlock className="h-3 w-3 shrink-0" /> : <Lock className="h-3 w-3 shrink-0" />}
+                {node.sensitive ? 'Remove sensitive' : 'Mark as sensitive'}
+              </button>
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
+                onClick={e => { e.stopPropagation(); onToggleActive(node.id); setMenuOpen(false) }}
+              >
+                {node.active ? <Eye className="h-3 w-3 shrink-0" /> : <EyeOff className="h-3 w-3 shrink-0" />}
+                {node.active ? 'Hide from agent' : 'Show to agent'}
+              </button>
+              <div className="h-px bg-white/10 my-1" />
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left text-red-400"
+                onClick={e => { e.stopPropagation(); onDelete(node.id); setMenuOpen(false) }}
+              >
+                <Trash2 className="h-3 w-3 shrink-0" />
+                Delete
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Row 2: memory type + confidence dot + right-aligned active status icons */}
@@ -208,11 +214,11 @@ export function CanvasNode({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="h-4 w-4 flex items-center justify-center rounded"
+                    className="h-4 w-4 flex items-center justify-center rounded text-orange-300"
                     onMouseDown={e => e.stopPropagation()}
                     onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id) }}
                   >
-                    <Lock className="h-3 w-3" />
+                    <Lock className="h-3 w-3" fill="currentColor" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>Sensitive — click to remove</TooltipContent>
