@@ -48,7 +48,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 // ─── PillSelect ────────────────────────────────────────────────────────────────
 
-interface PillOption<T extends string> { value: T; label: string; activeClassName?: string }
+interface PillOption<T extends string> { value: T; label: string; activeClassName?: string; dot?: string }
 
 interface PillSelectProps<T extends string> {
   value: T
@@ -80,22 +80,28 @@ export function PillSelect<T extends string>({ value, options, onChange }: PillS
           current.activeClassName ?? 't-text',
         )}
       >
+        {current.dot && <span className={cn('text-[10px]', current.dot)}>●</span>}
         {current.label}
         <ChevronDown className="h-3 w-3 t-muted" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 min-w-[130px] rounded-lg border t-border t-sidebar shadow-xl overflow-hidden">
+        <div className="absolute top-full left-0 mt-1 z-50 min-w-[130px] rounded-lg border t-border t-sidebar shadow-xl overflow-hidden p-1.5 flex flex-col gap-1">
           {options.map(opt => (
             <button
               key={opt.value}
               type="button"
               onClick={() => { onChange(opt.value); setOpen(false) }}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-[11px] t-text hover:bg-white/[0.06] transition-colors"
+              className={cn(
+                'flex items-center gap-1.5 w-full px-2.5 py-1 rounded-full border text-[11px] transition-colors text-left',
+                opt.activeClassName
+                  ? cn(opt.activeClassName, 'bg-white/[0.04] hover:bg-white/[0.10]')
+                  : 't-text border-transparent hover:bg-white/[0.06]',
+                opt.value === value && !opt.activeClassName && 'border-white/20',
+              )}
             >
-              <span className="w-3 shrink-0">
-                {opt.value === value && <Check className="h-3 w-3 t-accent" />}
-              </span>
-              {opt.label}
+              {opt.dot && <span className={cn('text-[10px] shrink-0', opt.dot)}>●</span>}
+              <span className="flex-1">{opt.label}</span>
+              {opt.value === value && <Check className="h-3 w-3 shrink-0 t-accent" />}
             </button>
           ))}
         </div>

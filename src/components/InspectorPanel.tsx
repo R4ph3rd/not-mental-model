@@ -46,10 +46,10 @@ const MEMORY_TYPE_OPTIONS: { value: MemoryType; label: string; activeClassName: 
   { value: 'episodic', label: 'Episodic', activeClassName: 'border-violet-500/40 text-violet-300' },
 ]
 
-const CONFIDENCE_OPTIONS: { value: ConfidenceLevel; label: string }[] = [
-  { value: 'high',   label: 'High' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'low',    label: 'Low' },
+const CONFIDENCE_OPTIONS: { value: ConfidenceLevel; label: string; activeClassName: string; dot: string }[] = [
+  { value: 'high',   label: 'High',   activeClassName: 'border-green-500/40 text-green-300',  dot: 'text-green-400' },
+  { value: 'medium', label: 'Medium', activeClassName: 'border-yellow-500/40 text-yellow-300', dot: 'text-yellow-400' },
+  { value: 'low',    label: 'Low',    activeClassName: 'border-red-500/40 text-red-300',       dot: 'text-red-400' },
 ]
 
 const SOURCE_OPTIONS: { value: string; label: string }[] = [
@@ -194,18 +194,15 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <FieldLabel>Importance</FieldLabel>
-            <span className="text-[11px] font-medium tabular-nums" style={{ color: CATEGORY_HEADER_BORDER[n.category] }}>
+            <span className="text-[11px] font-medium tabular-nums t-muted">
               {Math.round((liveImportance ?? n.importance) * 100)}%
             </span>
           </div>
           <div className="relative flex items-center h-4">
             <div className="absolute inset-x-0 h-1 rounded-full bg-white/10" />
             <div
-              className="absolute h-1 rounded-full"
-              style={{
-                width: `${(liveImportance ?? n.importance) * 100}%`,
-                background: CATEGORY_HEADER_BORDER[n.category],
-              }}
+              className="absolute h-1 rounded-full bg-white/40"
+              style={{ width: `${(liveImportance ?? n.importance) * 100}%` }}
             />
             <input
               key={n.id}
@@ -318,7 +315,8 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           <div className="flex-1" />
 
           <Button
-            variant="destructive" size="sm"
+            variant="outline" size="sm"
+            className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300"
             onClick={() => { onDelete(n.id); onClose() }}
           >
             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
