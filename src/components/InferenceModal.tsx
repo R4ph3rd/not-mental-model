@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Loader2, Bot, Check, X, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
+import { Loader2, Bot, Telescope, Check, X, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import { CATEGORY_COLORS, CATEGORY_LABELS, CONFIDENCE_COLORS } from '@/types/mental-model'
@@ -128,7 +128,9 @@ export function InferenceModal({ mode, nodes, onAddNodes, onClose }: Props) {
         {/* Header */}
         <div className="flex items-start gap-3 px-5 pt-5 pb-4 border-b t-border shrink-0">
           <div className="h-8 w-8 rounded-lg t-accent-subtle flex items-center justify-center shrink-0 mt-0.5">
-            <Bot className="h-4 w-4 t-accent" />
+            {mode === 'from-selection'
+              ? <Bot className="h-4 w-4 t-accent" />
+              : <Telescope className="h-4 w-4 t-accent" />}
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold t-text">{cfg.title}</h2>
