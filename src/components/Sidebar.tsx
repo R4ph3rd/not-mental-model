@@ -427,7 +427,7 @@ export function Sidebar({
             className="flex items-center gap-2 flex-1 min-w-0 text-left"
             onClick={() => { onGroupFilter(null); onConversationFilter(null) }}
           >
-            <Brain className={cn('h-3.5 w-3.5 shrink-0', noFilter ? 't-accent' : '')} />
+            {/* <Brain className={cn('h-3.5 w-3.5 shrink-0', noFilter ? 't-accent' : '')} /> */}
             <span className="flex-1">All nodes</span>
             <span className="tabular-nums text-[10px]">{total}</span>
           </button>
