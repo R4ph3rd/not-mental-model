@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, MessageSquare, Plus, Trash2, Pin, Lock, Unlock, Eye, EyeOff } from 'lucide-react'
+import { X, MessageSquare, Plus, Trash2, Pin, Lock, Unlock, Eye, EyeOff, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PillSelect, TagInput } from '@/components/NodeForm'
 import { CATEGORY_LABELS } from '@/types/mental-model'
@@ -15,6 +15,7 @@ interface Props {
   onDelete: (id: string) => void
   onToggleActive?: (id: string) => void
   onTogglePin?: (id: string) => void
+  onConfirm?: (id: string) => void
 }
 
 // ─── Category color maps ────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelete, onToggleActive, onTogglePin }: Props) {
+export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelete, onToggleActive, onTogglePin, onConfirm }: Props) {
   const [showConvPicker, setShowConvPicker] = useState(false)
   const [editingTitle, setEditingTitle]     = useState(false)
   const [titleDraft, setTitleDraft]         = useState('')
@@ -112,7 +113,7 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
 
       {/* ── Category-colored header ── */}
       <div
-        className="flex items-center gap-2 px-3 py-2.5 shrink-0 border-b"
+        className="flex items-start gap-2 px-3 py-2.5 shrink-0 border-b"
         style={{
           background: CATEGORY_HEADER_BG[n.category],
           borderBottomColor: CATEGORY_HEADER_BORDER[n.category],
@@ -122,6 +123,7 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           value={n.category}
           options={CATEGORY_OPTIONS}
           onChange={v => upd('category', v)}
+          dropdownAlign="right"
         />
 
         {editingTitle ? (
@@ -134,11 +136,11 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
               if (e.key === 'Enter') { e.preventDefault(); commitTitle() }
               if (e.key === 'Escape') setEditingTitle(false)
             }}
-            className="flex-1 text-sm font-medium t-text bg-transparent border-b border-white/25 outline-none"
+            className="flex-1 text-sm font-medium t-text bg-transparent border-b border-white/25 outline-none mt-0.5"
           />
         ) : (
           <span
-            className="flex-1 text-sm font-medium t-text truncate cursor-text select-none"
+            className="flex-1 text-sm font-medium t-text break-words cursor-text select-none mt-0.5"
             onDoubleClick={() => { setTitleDraft(n.title); setEditingTitle(true) }}
             title="Double-click to rename"
           >
@@ -180,13 +182,13 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
         {/* Pill metadata */}
         <div className="px-4 py-3 space-y-2.5">
           <MetaRow label="Memory type">
-            <PillSelect value={n.memoryType} options={MEMORY_TYPE_OPTIONS} onChange={v => upd('memoryType', v)} />
+            <PillSelect value={n.memoryType} options={MEMORY_TYPE_OPTIONS} onChange={v => upd('memoryType', v)} dropdownAlign="right" />
           </MetaRow>
           <MetaRow label="Confidence">
-            <PillSelect value={n.confidence} options={CONFIDENCE_OPTIONS} onChange={v => upd('confidence', v)} />
+            <PillSelect value={n.confidence} options={CONFIDENCE_OPTIONS} onChange={v => upd('confidence', v)} dropdownAlign="right" />
           </MetaRow>
           <MetaRow label="Source">
-            <PillSelect value={n.source ?? ''} options={SOURCE_OPTIONS} onChange={v => upd('source', v)} />
+            <PillSelect value={n.source ?? ''} options={SOURCE_OPTIONS} onChange={v => upd('source', v)} dropdownAlign="right" />
           </MetaRow>
         </div>
 
@@ -283,6 +285,29 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           )}
         </div>
 
+        {/* Agent confirmation */}
+        {n.provenance === 'agent' && !n.confirmed && (
+          <>
+            <Divider />
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Bot className="h-3 w-3 text-amber-400 shrink-0" />
+                <FieldLabel className="text-amber-400/80">Agent extracted — confirm to keep</FieldLabel>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm"
+                  className="flex-1 bg-transparent border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500/60 hover:text-green-300"
+                  onClick={() => onConfirm?.(n.id)}
+                >Keep</Button>
+                <Button variant="outline" size="sm"
+                  className="flex-1 bg-transparent border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300"
+                  onClick={() => { onDelete(n.id); onClose() }}
+                >Discard</Button>
+              </div>
+            </div>
+          </>
+        )}
+
         <Divider />
 
         {/* Actions row */}
@@ -308,7 +333,7 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
               title={n.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}
               onClick={() => upd('sensitive', !n.sensitive)}
             >
-              {n.sensitive ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+              {n.sensitive ? <Lock className="h-3.5 w-3.5" fill="currentColor" /> : <Unlock className="h-3.5 w-3.5" />}
             </Button>
           </div>
 
@@ -316,7 +341,7 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
 
           <Button
             variant="outline" size="sm"
-            className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300"
+            className="bg-transparent border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300"
             onClick={() => { onDelete(n.id); onClose() }}
           >
             <Trash2 className="h-3.5 w-3.5 mr-1.5" />

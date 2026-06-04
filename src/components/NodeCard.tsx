@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import {
   Eye, EyeOff, Pin, Trash2, Link, ChevronDown, ChevronUp,
   Lock, Unlock, Bot, Sparkles, Check, ArrowUpCircle, X,
-  FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap,
+  Briefcase, MessageSquare, BookOpen, Heart, Target, Zap,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -13,9 +13,9 @@ import type { NodeFormData } from '@/store/mental-model-store'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
-  project:      <FolderKanban className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  project:      <Briefcase className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   conversation: <MessageSquare className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
-  fact:         <Lightbulb className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  fact:         <BookOpen className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   preference:   <Heart className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   goal:         <Target className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
   skill:        <Zap className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
@@ -157,7 +157,7 @@ export function NodeCard({
                   node.sensitive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onUpdate(node.id, { sensitive: !node.sensitive }) }}
               >
-                {node.sensitive ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                {node.sensitive ? <Lock className="h-3 w-3" fill="currentColor" /> : <Unlock className="h-3 w-3" />}
               </button>
             </TooltipTrigger>
             <TooltipContent>{node.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}</TooltipContent>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap,
+  Briefcase, MessageSquare, BookOpen, Heart, Target, Zap,
   Bot, Sparkles, Lock, Pin,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -10,9 +10,9 @@ import { CATEGORY_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
-  project:      <FolderKanban className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  project:      <Briefcase className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
   conversation: <MessageSquare className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
-  fact:         <Lightbulb className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  fact:         <BookOpen className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
   preference:   <Heart className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
   goal:         <Target className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
   skill:        <Zap className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
@@ -112,7 +112,7 @@ function TimelineItem({ node, selected, onEditRequest, onToggleSelect, onUpdate 
             </span>
           )}
           {node.pinned && <Pin className="h-3 w-3 text-amber-400 shrink-0" fill="currentColor" />}
-          {node.sensitive && <Lock className="h-3 w-3 text-orange-400 shrink-0" />}
+          {node.sensitive && <Lock className="h-3 w-3 text-orange-400 shrink-0" fill="currentColor" />}
           {node.provenance === 'agent' && <Bot className={cn('h-3 w-3 shrink-0', isUnconfirmed ? 'text-amber-400' : 'text-blue-400/60')} />}
           {node.provenance === 'extracted' && <Sparkles className="h-3 w-3 text-purple-400/60 shrink-0" />}
           <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
