@@ -6,7 +6,7 @@ import { computeDecayScore } from '@/lib/decay'
 const REPULSION     = 5000
 const SPRING_LEN    = 110
 const SPRING_K      = 0.04
-const CENTER_K      = 0.004
+const CENTER_K      = 0.001
 const DAMPING       = 0.82
 const MIN_DIST      = 28
 const MAX_SIM_STEPS = 450
@@ -50,6 +50,64 @@ function resolveRadius(node: MentalModelNode): number {
   // size ∝ retention (importance) × connectivity (links)
   const score = node.importance * (node.linkedIds.length + 1)
   return Math.max(5, Math.min(22, 4 + Math.sqrt(score) * 4.5))
+}
+
+// ── Convex hull + smooth blob for group shapes ────────────────────────────────
+function convexHull(pts: Vec2[]): Vec2[] {
+  if (pts.length < 3) return pts
+  const sorted = [...pts].sort((a, b) => a.x !== b.x ? a.x - b.x : a.y - b.y)
+  const lower: Vec2[] = []
+  for (const p of sorted) {
+    while (lower.length >= 2) {
+      const a = lower[lower.length - 2], b = lower[lower.length - 1]
+      if ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x) <= 0) lower.pop()
+      else break
+    }
+    lower.push(p)
+  }
+  const upper: Vec2[] = []
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i]
+    while (upper.length >= 2) {
+      const a = upper[upper.length - 2], b = upper[upper.length - 1]
+      if ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x) <= 0) upper.pop()
+      else break
+    }
+    upper.push(p)
+  }
+  upper.pop(); lower.pop()
+  return lower.concat(upper)
+}
+
+function inflateHull(hull: Vec2[], pad: number): Vec2[] {
+  if (hull.length < 2) return hull
+  const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length
+  const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length
+  return hull.map(p => {
+    const dx = p.x - cx, dy = p.y - cy
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+    return { x: p.x + (dx / len) * pad, y: p.y + (dy / len) * pad }
+  })
+}
+
+function drawBlob(ctx: CanvasRenderingContext2D, pts: Vec2[]) {
+  if (pts.length < 2) return
+  ctx.beginPath()
+  if (pts.length === 2) {
+    const r = 24
+    ctx.arc((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, r + Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) / 2, 0, Math.PI * 2)
+    return
+  }
+  const first = pts[0]
+  ctx.moveTo((first.x + pts[1].x) / 2, (first.y + pts[1].y) / 2)
+  for (let i = 0; i < pts.length; i++) {
+    const curr = pts[i]
+    const next = pts[(i + 1) % pts.length]
+    const mx = (curr.x + next.x) / 2
+    const my = (curr.y + next.y) / 2
+    ctx.quadraticCurveTo(curr.x, curr.y, mx, my)
+  }
+  ctx.closePath()
 }
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -186,6 +244,60 @@ export function GraphView({
     ctx.translate(cssW / 2 + pan.x, cssH / 2 + pan.y)
     ctx.scale(scale, scale)
 
+    // ── Group blobs (convex hull shapes) ─────────────────────────────────────
+    type GroupLike = { id: string; name: string; color: string }
+    const allGroupLike: GroupLike[] = [
+      ...(groups ?? []).map(g => ({ id: g.id, name: g.name, color: g.color })),
+      ...(projects ?? []).map(p => ({ id: p.id, name: p.name, color: p.color })),
+    ]
+    const projectIds = new Set((projects ?? []).map(p => p.id))
+
+    for (const group of allGroupLike) {
+      const isProject = projectIds.has(group.id)
+      const memberNodes = nodes.filter(n =>
+        isProject ? n.projectId === group.id : n.groupIds.includes(group.id)
+      )
+      if (memberNodes.length < 2) continue
+      const pts = memberNodes.map(n => pos[n.id]).filter(Boolean) as Vec2[]
+      if (pts.length < 2) continue
+      const hull = pts.length >= 3 ? convexHull(pts) : pts
+      const pad = 32
+      const inflated = inflateHull(hull, pad)
+      const hex = group.color ?? '#888'
+      ctx.save()
+      drawBlob(ctx, inflated)
+      ctx.globalAlpha = 0.07
+      ctx.fillStyle = hex
+      ctx.fill()
+      ctx.globalAlpha = 0.20
+      ctx.strokeStyle = hex
+      ctx.lineWidth = 1.2 / scale
+      ctx.stroke()
+      ctx.restore()
+
+      // Floating label near top of blob
+      if (inflated.length > 0) {
+        const topPt = inflated.reduce((best, p) => p.y < best.y ? p : best, inflated[0])
+        const fs = Math.max(9, 11 / scale)
+        ctx.save()
+        ctx.font = `600 ${fs}px system-ui, -apple-system, sans-serif`
+        const tw = ctx.measureText(group.name).width
+        const lx = topPt.x - tw / 2
+        const ly = topPt.y - 8 / scale
+        const padH = 5 / scale, padV = 3 / scale
+        roundedRect(ctx, lx - padH, ly - fs / 2 - padV, tw + padH * 2, fs + padV * 2, 4 / scale)
+        ctx.globalAlpha = 0.18
+        ctx.fillStyle = hex
+        ctx.fill()
+        ctx.globalAlpha = 0.9
+        ctx.fillStyle = hex
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(group.name, lx, ly)
+        ctx.restore()
+      }
+    }
+
     // ── Links ──────────────────────────────────────────────────────────────────
     const drawnLinks = new Set<string>()
     ctx.lineWidth = 0.8 / scale
@@ -257,6 +369,17 @@ export function GraphView({
         ctx.lineWidth   = 1.5 / scale
         ctx.stroke()
         ctx.restore()
+      }
+
+      // Unconfirmed agent indicator — amber dot at top-right of node
+      if (node.provenance === 'agent' && !node.confirmed) {
+        const dotR = Math.max(3, 3.5 / scale)
+        const dotX = p.x + r * 0.7
+        const dotY = p.y - r * 0.7
+        ctx.beginPath()
+        ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2)
+        ctx.fillStyle = '#fbbf24'
+        ctx.fill()
       }
 
       // Always-visible label for selected nodes; hover label for others
@@ -396,7 +519,7 @@ export function GraphView({
       const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top, canvas)
       posRef.current[nd.id] = world
       velRef.current[nd.id] = { x: 0, y: 0 }
-      stepsRef.current = Math.min(stepsRef.current, MAX_SIM_STEPS - 60) // light re-run
+      stepsRef.current = Math.min(stepsRef.current, MAX_SIM_STEPS - 120)
       return
     }
 
@@ -445,6 +568,7 @@ export function GraphView({
       }
     }
 
+    if (nd) stepsRef.current = 0 // restart sim so nodes settle after drag
     pinnedIdRef.current = null
     nodeDragRef.current = null
     panDragRef.current  = null
