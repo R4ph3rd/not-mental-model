@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  Brain, MessageSquare, Lightbulb, Heart, Target, Zap,
+  Brain, MessageSquare, BookOpen, Heart, Target, Zap,
   Eye, EyeOff, ChevronDown, ChevronRight, Folder, X,
   FolderPlus, MessageSquarePlus, CirclePlus,
-  Pencil, Trash2, Copy, Navigation, ListFilter, GripVertical,
+  Pencil, Trash2, Copy, Navigation, ListFilter, GripVertical, Briefcase,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { NodeCategory, Conversation, MemoryGroup, MentalModelNode, Project } from '@/types/mental-model'
@@ -21,9 +21,9 @@ function darkenHsl(hsl: string, amount = 20): string {
 
 const CATEGORY_ICONS: Record<NodeCategory | 'all', React.ReactNode> = {
   all:          <Brain className="h-3.5 w-3.5" />,
-  project:      <Folder className="h-3.5 w-3.5" />,
+  project:      <Briefcase className="h-3.5 w-3.5" />,
   conversation: <MessageSquare className="h-3.5 w-3.5" />,
-  fact:         <Lightbulb className="h-3.5 w-3.5" />,
+  fact:         <BookOpen className="h-3.5 w-3.5" />,
   preference:   <Heart className="h-3.5 w-3.5" />,
   goal:         <Target className="h-3.5 w-3.5" />,
   skill:        <Zap className="h-3.5 w-3.5" />,
