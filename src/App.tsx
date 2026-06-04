@@ -338,7 +338,7 @@ export default function App() {
             <div className="flex-1 flex flex-col min-w-0">
 
               {view === 'timeline' ? (
-                <Timeline nodes={filtered} onEditRequest={id => setInspectorId(id)} onUpdate={updateNode} />
+                <Timeline nodes={filtered} selectedIds={selectedIds} onEditRequest={id => setInspectorId(id)} onToggleSelect={handleToggleSelect} onUpdate={updateNode} />
               ) : view === 'grid' ? (
                 <ScrollArea className="flex-1">
                   <div className="p-5">
