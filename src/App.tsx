@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
   Share2, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare, Telescope, Bot,
-  Network,
+  Network, FolderOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -153,6 +153,31 @@ export default function App() {
   }, [nodes, categoryFilter, conversationFilter, groupFilter, search])
 
   const activeCount   = useMemo(() => nodes.filter(isNodeVisibleToAgent).length, [nodes, inactiveGroupIds])
+
+  type GridSection = { id: string; name: string; color: string; items: MentalModelNode[] }
+  const gridSections = useMemo((): GridSection[] | null => {
+    if (groupFilter || conversationFilter) return null
+    const sections: GridSection[] = []
+    const claimed = new Set<string>()
+
+    for (const proj of projects) {
+      const items = filtered.filter(n => n.projectId === proj.id)
+      if (items.length > 0) {
+        sections.push({ id: proj.id, name: proj.name, color: proj.color, items })
+        items.forEach(n => claimed.add(n.id))
+      }
+    }
+    for (const grp of groups) {
+      const items = filtered.filter(n => !claimed.has(n.id) && n.groupIds.includes(grp.id))
+      if (items.length > 0) {
+        sections.push({ id: grp.id, name: grp.name, color: grp.color, items })
+        items.forEach(n => claimed.add(n.id))
+      }
+    }
+    const ungrouped = filtered.filter(n => !claimed.has(n.id))
+    if (ungrouped.length > 0) sections.push({ id: '__ungrouped', name: 'Ungrouped', color: '', items: ungrouped })
+    return sections.length > 1 ? sections : null
+  }, [filtered, projects, groups, groupFilter, conversationFilter])
   const selectedNodes = useMemo(() => nodes.filter(n => selectedIds.has(n.id)), [nodes, selectedIds])
   const inspectedNode = useMemo(() => nodes.find(n => n.id === inspectorId) ?? null, [nodes, inspectorId])
 
@@ -346,6 +371,39 @@ export default function App() {
                       <div className="flex flex-col items-center justify-center h-64 t-muted gap-3">
                         <Brain className="h-10 w-10 opacity-20" />
                         <p className="text-sm">{search ? 'No nodes match your search' : 'No nodes yet'}</p>
+                      </div>
+                    ) : gridSections ? (
+                      <div className="space-y-6">
+                        {gridSections.map(section => (
+                          <div key={section.id}
+                            className="rounded-xl p-3 border border-white/[0.06]"
+                            style={section.color ? { backgroundColor: `${section.color}0d` } : undefined}
+                          >
+                            <div className="flex items-center gap-2 mb-3 px-1">
+                              <FolderOpen className="h-4 w-4 shrink-0" style={{ color: section.color || undefined }} />
+                              <span className="text-sm font-semibold t-text">{section.name}</span>
+                              <span className="text-[11px] t-muted">({section.items.length})</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                              {section.items.map(node => (
+                                <NodeCard
+                                  key={node.id}
+                                  node={node}
+                                  linkedNodes={getLinkedNodes(node.linkedIds)}
+                                  selected={selectedIds.has(node.id)}
+                                  onSelect={handleToggleSelect}
+                                  onUpdate={updateNode}
+                                  onDelete={id => { deleteNode(id); setSelectedIds(p => { const n = new Set(p); n.delete(id); return n }) }}
+                                  onToggleActive={toggleActive}
+                                  onTogglePin={togglePin}
+                                  onConfirm={confirmNode}
+                                  onEditRequest={id => setInspectorId(id)}
+                                  onDistill={handleDistill}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
