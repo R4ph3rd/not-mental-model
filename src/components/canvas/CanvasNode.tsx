@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Eye, EyeOff, Pin, Trash2, Lock, Unlock, Briefcase, MessageSquare, BookOpen, Heart, Target, Zap, MoreVertical, Bot } from 'lucide-react'
+import { Eye, EyeOff, Pin, Trash2, LockKeyhole, Unlock, Briefcase, MessageSquare, BookOpen, Heart, Target, Zap, MoreVertical, Bot } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
@@ -134,7 +134,7 @@ export function CanvasNode({
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
                 onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id); setMenuOpen(false) }}
               >
-                {node.sensitive ? <Unlock className="h-3 w-3 shrink-0" /> : <Lock className="h-3 w-3 shrink-0" />}
+                {node.sensitive ? <Unlock className="h-3 w-3 shrink-0" /> : <LockKeyhole className="h-3 w-3 shrink-0" />}
                 {node.sensitive ? 'Remove sensitive' : 'Mark as sensitive'}
               </button>
               <button
@@ -157,7 +157,7 @@ export function CanvasNode({
         </div>
 
         {/* Row 2: memory type + confidence dot + right-aligned active status icons */}
-        <div className="flex items-center gap-1.5 mt-0.5">
+        <div className="flex items-center gap-1.5 mt-1.5">
           <span className={cn('text-[10px] opacity-70',
             node.memoryType === 'episodic' ? 'text-violet-200' : 'text-teal-200')}>
             {node.memoryType}
@@ -218,7 +218,7 @@ export function CanvasNode({
                     onMouseDown={e => e.stopPropagation()}
                     onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id) }}
                   >
-                    <Lock className="h-3 w-3" fill="currentColor" />
+                    <LockKeyhole className="h-3 w-3" fill="currentColor" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>Sensitive — click to remove</TooltipContent>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, MessageSquare, Plus, Trash2, Pin, Lock, Unlock, Eye, EyeOff, Bot } from 'lucide-react'
+import { X, MessageSquare, Plus, Trash2, Pin, LockKeyhole, Unlock, Eye, EyeOff, Bot, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PillSelect, TagInput } from '@/components/NodeForm'
 import { CATEGORY_LABELS } from '@/types/mental-model'
@@ -289,21 +289,17 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
         {n.provenance === 'agent' && !n.confirmed && (
           <>
             <Divider />
-            <div className="px-4 py-3">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Bot className="h-3 w-3 text-amber-400 shrink-0" />
-                <FieldLabel className="text-amber-400/80">Agent extracted — confirm to keep</FieldLabel>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm"
-                  className="flex-1 bg-transparent border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500/60 hover:text-green-300"
-                  onClick={() => onConfirm?.(n.id)}
-                >Keep</Button>
-                <Button variant="outline" size="sm"
-                  className="flex-1 bg-transparent border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300"
-                  onClick={() => { onDelete(n.id); onClose() }}
-                >Discard</Button>
-              </div>
+            <div className="mx-4 my-3 flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/25 px-3 py-2">
+              <Bot className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <p className="text-[11px] text-amber-300/90 flex-1">Agent extracted — confirm to keep.</p>
+              <button
+                className="flex items-center gap-0.5 text-[10px] text-green-400 hover:text-green-300 shrink-0"
+                onClick={() => onConfirm?.(n.id)}
+              ><Check className="h-3 w-3" />Keep</button>
+              <button
+                className="flex items-center gap-0.5 text-[10px] text-red-400 hover:text-red-300 shrink-0"
+                onClick={() => { onDelete(n.id); onClose() }}
+              ><X className="h-3 w-3" />Discard</button>
             </div>
           </>
         )}
@@ -333,20 +329,19 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
               title={n.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}
               onClick={() => upd('sensitive', !n.sensitive)}
             >
-              {n.sensitive ? <Lock className="h-3.5 w-3.5" fill="currentColor" /> : <Unlock className="h-3.5 w-3.5" />}
+              {n.sensitive ? <LockKeyhole className="h-3.5 w-3.5" fill="currentColor" /> : <Unlock className="h-3.5 w-3.5" />}
             </Button>
           </div>
 
           <div className="flex-1" />
 
-          <Button
-            variant="outline" size="sm"
-            className="bg-transparent border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300"
+          <button
+            className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 transition-colors px-2 py-1"
             onClick={() => { onDelete(n.id); onClose() }}
           >
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            <Trash2 className="h-3.5 w-3.5" />
             Delete
-          </Button>
+          </button>
         </div>
 
       </div>

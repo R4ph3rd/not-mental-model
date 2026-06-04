@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import {
   Eye, EyeOff, Pin, Trash2, Link, ChevronDown, ChevronUp,
-  Lock, Unlock, Bot, Sparkles, Check, ArrowUpCircle, X,
+  LockKeyhole, Unlock, Bot, Sparkles, Check, ArrowUpCircle, X,
   Briefcase, MessageSquare, BookOpen, Heart, Target, Zap,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -157,7 +157,7 @@ export function NodeCard({
                   node.sensitive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onUpdate(node.id, { sensitive: !node.sensitive }) }}
               >
-                {node.sensitive ? <Lock className="h-3 w-3" fill="currentColor" /> : <Unlock className="h-3 w-3" />}
+                {node.sensitive ? <LockKeyhole className="h-3 w-3" fill="currentColor" /> : <Unlock className="h-3 w-3" />}
               </button>
             </TooltipTrigger>
             <TooltipContent>{node.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}</TooltipContent>
