@@ -347,6 +347,7 @@ export function Sidebar({
     const convNodes = nodes.filter(n =>
       n.conversationIds.includes(conv.id) && (groupId ? n.projectId === groupId : !n.projectId)
     )
+    void convNodes // all nodes shown flat at group root, not nested here
     const isDragging = draggingId === conv.id
     const isDropTarget = dropItemTarget === `conv:${conv.id}`
     return (
@@ -398,7 +399,6 @@ export function Sidebar({
             </button>
           </div>
         </div>
-        {convNodes.map(n => <NodeRow key={n.id} node={n} />)}
       </div>
     )
   }
@@ -502,11 +502,7 @@ export function Sidebar({
             const isActive   = groupFilter === group.id && !conversationFilter
             const isDragOver = dropTargetId === group.id && draggingId !== group.id
 
-            const projectConvIds = new Set(convs.map(c => c.id))
             const allGroupNodes = getGroupNodes(group.id)
-            const directNodes = allGroupNodes.filter(n =>
-              !n.conversationIds.some(cid => projectConvIds.has(cid))
-            )
 
             return (
               <div key={group.id}
@@ -580,7 +576,7 @@ export function Sidebar({
                       )
                     })()}
 
-                    {orderedDirectNodes(group.id, directNodes).map(n => <NodeRow key={n.id} node={n} groupId={group.id} />)}
+                    {orderedDirectNodes(group.id, allGroupNodes).map(n => <NodeRow key={n.id} node={n} groupId={group.id} />)}
 
                     {subs.map(sub => {
                       const isSubFilter = groupFilter === sub.id
