@@ -274,7 +274,7 @@ export function GraphView({
       const pts = memberNodes.map(n => pos[n.id]).filter(Boolean) as Vec2[]
       if (pts.length < 1) continue
       const hull = pts.length >= 3 ? convexHull(pts) : pts
-      const pad = 40
+      const pad = 56
       const inflated = inflateHull(hull, pad)
       const hex = group.color ?? '#888'
       ctx.save()
