@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Briefcase, MessageSquare, BookOpen, Heart, Target, Zap,
-  Bot, Sparkles, LockKeyhole, Pin,
+  Bot, Sparkles, KeyRound, Pin,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
@@ -112,7 +112,7 @@ function TimelineItem({ node, selected, onEditRequest, onToggleSelect, onUpdate 
             </span>
           )}
           {node.pinned && <Pin className="h-3 w-3 text-amber-400 shrink-0" fill="currentColor" />}
-          {node.sensitive && <LockKeyhole className="h-3 w-3 text-orange-400 shrink-0" fill="currentColor" />}
+          {node.sensitive && <KeyRound className="h-3 w-3 text-orange-400 shrink-0" fill="currentColor" />}
           {node.provenance === 'agent' && <Bot className={cn('h-3 w-3 shrink-0', isUnconfirmed ? 'text-amber-400' : 'text-blue-400/60')} />}
           {node.provenance === 'extracted' && <Sparkles className="h-3 w-3 text-purple-400/60 shrink-0" />}
           <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
@@ -165,30 +165,29 @@ export function Timeline({ nodes, selectedIds, onEditRequest, onToggleSelect, on
         <div className="flex items-center justify-center h-40 t-muted text-sm">No memories yet.</div>
       )}
 
-      {groups.map(group => (
+      {groups.map((group, idx) => (
         <div key={group.label} className="mb-6">
           {/* Date header */}
           <div className="flex items-center gap-3 mb-2">
             <p className="text-[11px] font-semibold t-muted uppercase tracking-wider shrink-0">{group.label}</p>
             <div className="flex-1 h-px t-border" />
-            <div className="w-[60px] shrink-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <p className="text-[10px] font-bold t-muted uppercase tracking-wider cursor-help">R</p>
-                </TooltipTrigger>
-                <TooltipContent>Retention: recency × 0.4 + importance × 0.35 + confidence × 0.25</TooltipContent>
-              </Tooltip>
-            </div>
+            {idx === 0 && (
+              <div className="w-[60px] shrink-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-[10px] font-bold t-muted uppercase tracking-wider cursor-help">R</p>
+                  </TooltipTrigger>
+                  <TooltipContent>Retention: recency × 0.4 + importance × 0.35 + confidence × 0.25</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
           </div>
 
           {/* Timeline items */}
-          <div className="relative">
-            <div className="absolute left-[39px] top-0 bottom-0 w-px bg-white/8" />
-            <div className="space-y-1">
-              {group.items.map(node => (
-                <TimelineItem key={node.id} node={node} selected={selectedIds?.has(node.id)} onEditRequest={onEditRequest} onToggleSelect={onToggleSelect} onUpdate={onUpdate} />
-              ))}
-            </div>
+          <div className="space-y-1">
+            {group.items.map(node => (
+              <TimelineItem key={node.id} node={node} selected={selectedIds?.has(node.id)} onEditRequest={onEditRequest} onToggleSelect={onToggleSelect} onUpdate={onUpdate} />
+            ))}
           </div>
         </div>
       ))}

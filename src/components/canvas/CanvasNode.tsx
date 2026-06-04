@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Eye, EyeOff, Pin, Trash2, LockKeyhole, Unlock, Briefcase, MessageSquare, BookOpen, Heart, Target, Zap, MoreVertical, Bot } from 'lucide-react'
+import { Eye, EyeOff, Pin, Trash2, KeyRound, Unlock, Briefcase, MessageSquare, BookOpen, Heart, Target, Zap, MoreVertical, Bot } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
@@ -134,7 +134,7 @@ export function CanvasNode({
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-white/8 transition-colors text-left t-text"
                 onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id); setMenuOpen(false) }}
               >
-                {node.sensitive ? <Unlock className="h-3 w-3 shrink-0" /> : <LockKeyhole className="h-3 w-3 shrink-0" />}
+                {node.sensitive ? <Unlock className="h-3 w-3 shrink-0" /> : <KeyRound className="h-3 w-3 shrink-0" />}
                 {node.sensitive ? 'Remove sensitive' : 'Mark as sensitive'}
               </button>
               <button
@@ -218,7 +218,7 @@ export function CanvasNode({
                     onMouseDown={e => e.stopPropagation()}
                     onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id) }}
                   >
-                    <LockKeyhole className="h-3 w-3" fill="currentColor" />
+                    <KeyRound className="h-3 w-3" fill="currentColor" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>Sensitive — click to remove</TooltipContent>
