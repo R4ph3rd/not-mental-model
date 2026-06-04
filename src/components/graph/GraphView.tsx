@@ -274,7 +274,7 @@ export function GraphView({
       const pts = memberNodes.map(n => pos[n.id]).filter(Boolean) as Vec2[]
       if (pts.length < 1) continue
       const hull = pts.length >= 3 ? convexHull(pts) : pts
-      const pad = 56
+      const pad = 72
       const inflated = inflateHull(hull, pad)
       const hex = group.color ?? '#888'
       ctx.save()
@@ -288,7 +288,7 @@ export function GraphView({
       ctx.stroke()
       ctx.restore()
 
-      // Floating label near top of blob
+      // Floating label near top of blob (inside the border)
       if (inflated.length > 0) {
         const topPt = inflated.reduce((best, p) => p.y < best.y ? p : best, inflated[0])
         const fs = Math.max(9, 11 / scale)
@@ -296,8 +296,8 @@ export function GraphView({
         ctx.font = `600 ${fs}px system-ui, -apple-system, sans-serif`
         const tw = ctx.measureText(group.name).width
         const lx = topPt.x - tw / 2
-        const ly = topPt.y - 8 / scale
         const padH = 5 / scale, padV = 3 / scale
+        const ly = topPt.y + fs / 2 + padV + 4 / scale
         roundedRect(ctx, lx - padH, ly - fs / 2 - padV, tw + padH * 2, fs + padV * 2, 4 / scale)
         ctx.globalAlpha = 0.18
         ctx.fillStyle = hex
