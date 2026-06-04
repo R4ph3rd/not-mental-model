@@ -158,6 +158,12 @@ export function Sidebar({
   const [_draggingType, setDraggingType] = useState<'node' | 'conversation' | 'group' | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
 
+  // Per-group conversations section expanded state
+  const [expandedConvSections, setExpandedConvSections] = useState<Set<string>>(() => new Set())
+  function toggleConvSection(groupId: string) {
+    setExpandedConvSections(prev => { const n = new Set(prev); n.has(groupId) ? n.delete(groupId) : n.add(groupId); return n })
+  }
+
   // Local ordering overrides (session-scoped, not persisted)
   const [convOrderMap, setConvOrderMap] = useState<Record<string, string[]>>({})
   const [nodeOrderMap, setNodeOrderMap] = useState<Record<string, string[]>>({})
@@ -557,7 +563,22 @@ export function Sidebar({
 
                 {isOpen && (
                   <div className="ml-4 border-l t-border pl-2 pb-1 space-y-0.5">
-                    {orderedConvs(group.id).map(conv => <ConvRow key={conv.id} conv={conv} groupId={group.id} />)}
+                    {convs.length > 0 && (() => {
+                      const convSectionOpen = expandedConvSections.has(group.id)
+                      return (
+                        <div>
+                          <button
+                            onClick={() => toggleConvSection(group.id)}
+                            className="flex items-center gap-1 w-full px-2 py-1 text-left t-muted hover:t-text transition-colors"
+                          >
+                            {convSectionOpen ? <ChevronDown className="h-2.5 w-2.5 shrink-0" /> : <ChevronRight className="h-2.5 w-2.5 shrink-0" />}
+                            <span className="text-[10px] uppercase tracking-widest font-semibold">Conversations</span>
+                            <span className="text-[10px] tabular-nums ml-auto">{convs.length}</span>
+                          </button>
+                          {convSectionOpen && orderedConvs(group.id).map(conv => <ConvRow key={conv.id} conv={conv} groupId={group.id} />)}
+                        </div>
+                      )
+                    })()}
 
                     {orderedDirectNodes(group.id, directNodes).map(n => <NodeRow key={n.id} node={n} groupId={group.id} />)}
 
