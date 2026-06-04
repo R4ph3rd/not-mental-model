@@ -8,6 +8,51 @@ Instead of AI memory being an opaque black box, every piece of knowledge the age
 
 ---
 
+## What's new
+
+### UI polish (June 2025)
+
+**Canvas**
+- Card titles wrap fully (no truncation); long titles expand card height
+- Three-dots menu floats above title text with a dark bg pill
+- Sensitive (🔑) / pin / eye icons animate in from the right on card hover with no gap between them
+- Menu closes on outside click (fixed CSS transform stacking context bug)
+
+**Inspector**
+- Title area expands vertically; wraps instead of truncating
+- Confidence pill shows a colored dot + colored text per level (green / yellow / red)
+- All pill dropdowns right-aligned so they don't overflow the panel edge
+- Agent confirmation strip now uses the same amber bg + border style as the grid card, with compact Keep / Discard buttons
+- Delete is ghost-style (icon + red text, no filled border)
+- Lock icon changed to a key icon (less visually heavy when filled)
+
+**Grid view**
+- Groups separated by a horizontal divider rule — no more boxes
+- Yellow left border on unconfirmed-agent cards persists on hover
+- Card icon buttons slide in from the right with a translate animation; no spacing between icons
+
+**Graph view**
+- Groups enclosed by a smooth closed-bézier hull with 72 px padding — all nodes stay inside the shape
+- Group label now sits just inside the top edge of the blob (was floating above it)
+- Center-attraction force reduced (0.001); simulation restarts after drag
+
+**Timeline view**
+- Vertical track line removed
+- R retention label shown only for the first (most-recent) date group
+- Subtle light background on item hover
+
+**Hierarchy sidebar**
+- Conversations shown under a collapsible **CONVERSATIONS** header per group
+- All nodes shown flat at the group root — not nested inside conversation items
+- Clicking a node in the sidebar opens the inspector
+
+**Other**
+- `BookOpen` icon for Fact nodes, `Briefcase` for Project nodes
+- All buttons / links have `cursor: pointer`
+- Conversation-linked nodes have a violet left border; unconfirmed agent nodes have amber
+
+---
+
 ## Screenshots
 
 <!-- Add screenshots to docs/screenshots/ and push — placeholders below -->
