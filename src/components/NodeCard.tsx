@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import {
   Eye, EyeOff, Pin, Trash2, Link, ChevronDown, ChevronUp,
-  LockKeyhole, Unlock, Bot, Sparkles, Check, ArrowUpCircle, X,
+  KeyRound, Unlock, Bot, Sparkles, Check, ArrowUpCircle, X,
   Briefcase, MessageSquare, BookOpen, Heart, Target, Zap,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -112,7 +112,7 @@ export function NodeCard({
         'group relative rounded-xl border flex flex-col transition-all cursor-pointer overflow-hidden',
         selected ? 't-accent-border t-accent-subtle ring-1 t-accent-ring' : 't-border t-card hover:border-white/20',
         !node.active && 'opacity-55',
-        isUnconfirmedAgent ? 'border-l-2 border-l-amber-400/70'
+        isUnconfirmedAgent ? 'border-l-2 border-l-amber-400/70 hover:border-l-amber-400/70'
           : (node.conversationIds?.length ?? 0) > 0 && 'border-l-2 border-l-violet-400/50',
       )}
     >
@@ -148,16 +148,16 @@ export function NodeCard({
           </span>
         )}
 
-        {/* Action buttons — state indicators always visible; others hover-only */}
-        <div className="flex items-center gap-0.5 ml-auto">
+        {/* Action buttons — slide in from right on hover */}
+        <div className="flex items-center gap-0 ml-auto translate-x-1 group-hover:translate-x-0 transition-transform duration-150">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
+                className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
                   node.sensitive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onUpdate(node.id, { sensitive: !node.sensitive }) }}
               >
-                {node.sensitive ? <LockKeyhole className="h-3 w-3" fill="currentColor" /> : <Unlock className="h-3 w-3" />}
+                {node.sensitive ? <KeyRound className="h-3 w-3" fill="currentColor" /> : <Unlock className="h-3 w-3" />}
               </button>
             </TooltipTrigger>
             <TooltipContent>{node.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}</TooltipContent>
@@ -166,7 +166,7 @@ export function NodeCard({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
+                className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
                   node.pinned ? 'text-amber-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
               >
@@ -179,7 +179,7 @@ export function NodeCard({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-opacity',
+                className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
                   !node.active ? 'text-red-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
                 onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
               >
@@ -190,7 +190,7 @@ export function NodeCard({
           </Tooltip>
 
           <button
-            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:text-red-300 hover:!opacity-100 transition-opacity"
+            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:text-red-300 hover:!opacity-100 transition-all duration-150"
             onClick={e => { e.stopPropagation(); onDelete(node.id) }}>
             <Trash2 className="h-3 w-3" />
           </button>

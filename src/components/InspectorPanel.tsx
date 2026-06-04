@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, MessageSquare, Plus, Trash2, Pin, LockKeyhole, Unlock, Eye, EyeOff, Bot, Check } from 'lucide-react'
+import { X, MessageSquare, Plus, Trash2, Pin, KeyRound, Unlock, Eye, EyeOff, Bot, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PillSelect, TagInput } from '@/components/NodeForm'
 import { CATEGORY_LABELS } from '@/types/mental-model'
@@ -329,7 +329,7 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
               title={n.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}
               onClick={() => upd('sensitive', !n.sensitive)}
             >
-              {n.sensitive ? <LockKeyhole className="h-3.5 w-3.5" fill="currentColor" /> : <Unlock className="h-3.5 w-3.5" />}
+              {n.sensitive ? <KeyRound className="h-3.5 w-3.5" fill="currentColor" /> : <Unlock className="h-3.5 w-3.5" />}
             </Button>
           </div>
 
