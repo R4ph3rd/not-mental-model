@@ -491,13 +491,13 @@ export default function App() {
                         <Bot className="h-3.5 w-3.5 t-accent" />Infer
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost"
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    <button
+                      className="inline-flex items-center gap-1 text-sm text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
                       onClick={() => {
                         for (const id of selectedIds) deleteNode(id); setSelectedIds(new Set())
                       }}>
                       <Trash2 className="h-3.5 w-3.5" />Delete
-                    </Button>
+                    </button>
                     <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
                   </>
                 ) : (
