@@ -56,6 +56,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 #root { height: 100%; }
+button, [role="button"], a[href], label[for] { cursor: pointer; }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
