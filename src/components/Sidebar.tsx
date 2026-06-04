@@ -198,6 +198,15 @@ export function Sidebar({
     ...groups.filter(g => !g.parentId),
   ].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
+  const projectIdSet = new Set(projects.map(p => p.id))
+  const isProjectGroup = (id: string) => projectIdSet.has(id)
+
+  function getGroupNodes(groupId: string): MentalModelNode[] {
+    return isProjectGroup(groupId)
+      ? nodes.filter(n => n.projectId === groupId)
+      : nodes.filter(n => n.groupIds.includes(groupId))
+  }
+
   const subGroupsOf = (id: string) => groups.filter(g => g.parentId === id)
 
   const total         = nodes.length
@@ -293,9 +302,10 @@ export function Sidebar({
           const raw = e.dataTransfer.getData('text/plain')
           const [type, id] = raw.split(':')
           if (type === 'node' && id !== node.id) {
-            const directIds = nodes.filter(n => n.projectId === groupId && !n.conversationIds.some(cid =>
-              conversations.filter(c => c.projectId === groupId).map(c => c.id).includes(cid)
-            )).map(n => n.id)
+            const groupConvIds = new Set(conversations.filter(c => c.projectId === groupId).map(c => c.id))
+            const directIds = getGroupNodes(groupId).filter(n =>
+              !n.conversationIds.some(cid => groupConvIds.has(cid))
+            ).map(n => n.id)
             reorderNodes(groupId, id, node.id, directIds)
           } else if (type === 'conversation') {
             onUpdateConversation(id, { projectId: groupId })
@@ -487,8 +497,8 @@ export function Sidebar({
             const isDragOver = dropTargetId === group.id && draggingId !== group.id
 
             const projectConvIds = new Set(convs.map(c => c.id))
-            const directNodes = nodes.filter(n =>
-              n.projectId === group.id &&
+            const allGroupNodes = getGroupNodes(group.id)
+            const directNodes = allGroupNodes.filter(n =>
               !n.conversationIds.some(cid => projectConvIds.has(cid))
             )
 
@@ -527,7 +537,7 @@ export function Sidebar({
                   )}
                   <div className="relative shrink-0 flex justify-end" style={{ minWidth: '52px' }}>
                     <span className={cn('tabular-nums text-[10px] group-hover:opacity-0 transition-opacity', isActive ? 't-accent' : 't-muted')}>
-                      {nodes.filter(n => n.projectId === group.id).length}
+                      {getGroupNodes(group.id).length}
                     </span>
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
                       <button onClick={() => onAddNode({ groupId: group.id })} className="t-muted hover:t-accent transition-colors" title="New node">
