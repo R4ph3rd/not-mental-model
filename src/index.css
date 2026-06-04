@@ -63,3 +63,12 @@ button, [role="button"], a[href], label[for] { cursor: pointer; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgb(var(--brd)); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgb(var(--tx-2)); }
+
+/* Tab content slide-in animation */
+@keyframes tab-slide-in {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+[role="tabpanel"][data-state="active"] {
+  animation: tab-slide-in 0.18s ease forwards;
+}
