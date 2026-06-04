@@ -86,26 +86,39 @@ function inflateHull(hull: Vec2[], pad: number): Vec2[] {
   return hull.map(p => {
     const dx = p.x - cx, dy = p.y - cy
     const len = Math.sqrt(dx * dx + dy * dy) || 1
-    return { x: p.x + (dx / len) * pad, y: p.y + (dy / len) * pad }
+    return { x: cx + (dx / len) * (len + pad), y: cy + (dy / len) * (len + pad) }
   })
 }
 
 function drawBlob(ctx: CanvasRenderingContext2D, pts: Vec2[]) {
-  if (pts.length < 2) return
+  if (pts.length < 1) return
   ctx.beginPath()
-  if (pts.length === 2) {
-    const r = 24
-    ctx.arc((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, r + Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) / 2, 0, Math.PI * 2)
+  if (pts.length === 1) {
+    ctx.arc(pts[0].x, pts[0].y, 28, 0, Math.PI * 2)
     return
   }
-  const first = pts[0]
-  ctx.moveTo((first.x + pts[1].x) / 2, (first.y + pts[1].y) / 2)
-  for (let i = 0; i < pts.length; i++) {
+  if (pts.length === 2) {
+    // Capsule: arc at each end + straight sides
+    const ax = pts[0].x, ay = pts[0].y, bx = pts[1].x, by = pts[1].y
+    const r = 28
+    const dx = bx - ax, dy = by - ay
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+    const nx = -dy / len, ny = dx / len
+    ctx.moveTo(ax + nx * r, ay + ny * r)
+    ctx.lineTo(bx + nx * r, by + ny * r)
+    ctx.arcTo(bx + dx / len * r * 1.5, by + dy / len * r * 1.5, bx - nx * r, by - ny * r, r)
+    ctx.lineTo(ax - nx * r, ay - ny * r)
+    ctx.arcTo(ax - dx / len * r * 1.5, ay - dy / len * r * 1.5, ax + nx * r, ay + ny * r, r)
+    ctx.closePath()
+    return
+  }
+  const n = pts.length
+  // Start at midpoint between last and first — the closing point is already the endpoint of the last bezier
+  ctx.moveTo((pts[n - 1].x + pts[0].x) / 2, (pts[n - 1].y + pts[0].y) / 2)
+  for (let i = 0; i < n; i++) {
     const curr = pts[i]
-    const next = pts[(i + 1) % pts.length]
-    const mx = (curr.x + next.x) / 2
-    const my = (curr.y + next.y) / 2
-    ctx.quadraticCurveTo(curr.x, curr.y, mx, my)
+    const next = pts[(i + 1) % n]
+    ctx.quadraticCurveTo(curr.x, curr.y, (curr.x + next.x) / 2, (curr.y + next.y) / 2)
   }
   ctx.closePath()
 }
@@ -257,11 +270,11 @@ export function GraphView({
       const memberNodes = nodes.filter(n =>
         isProject ? n.projectId === group.id : n.groupIds.includes(group.id)
       )
-      if (memberNodes.length < 2) continue
+      if (memberNodes.length < 1) continue
       const pts = memberNodes.map(n => pos[n.id]).filter(Boolean) as Vec2[]
-      if (pts.length < 2) continue
+      if (pts.length < 1) continue
       const hull = pts.length >= 3 ? convexHull(pts) : pts
-      const pad = 32
+      const pad = 40
       const inflated = inflateHull(hull, pad)
       const hex = group.color ?? '#888'
       ctx.save()
