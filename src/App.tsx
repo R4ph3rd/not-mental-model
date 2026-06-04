@@ -517,6 +517,7 @@ export default function App() {
                 onDelete={id => { deleteNode(id); setInspectorId(null) }}
                 onToggleActive={toggleActive}
                 onTogglePin={togglePin}
+                onConfirm={confirmNode}
               />
             )}
 

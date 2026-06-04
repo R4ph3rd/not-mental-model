@@ -54,9 +54,10 @@ interface PillSelectProps<T extends string> {
   value: T
   options: PillOption<T>[]
   onChange: (v: T) => void
+  dropdownAlign?: 'left' | 'right'
 }
 
-export function PillSelect<T extends string>({ value, options, onChange }: PillSelectProps<T>) {
+export function PillSelect<T extends string>({ value, options, onChange, dropdownAlign = 'left' }: PillSelectProps<T>) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const current = options.find(o => o.value === value) ?? options[0]
@@ -85,7 +86,7 @@ export function PillSelect<T extends string>({ value, options, onChange }: PillS
         <ChevronDown className="h-3 w-3 t-muted" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 min-w-[130px] rounded-lg border t-border t-sidebar shadow-xl overflow-hidden p-1.5 flex flex-col gap-1">
+        <div className={cn('absolute top-full mt-1 z-50 min-w-[130px] rounded-lg border t-border t-sidebar shadow-xl overflow-hidden p-1.5 flex flex-col gap-1', dropdownAlign === 'right' ? 'right-0' : 'left-0')}>
           {options.map(opt => (
             <button
               key={opt.value}
