@@ -10,12 +10,12 @@ import { CATEGORY_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
-  project:      <FolderKanban className="h-3.5 w-3.5" />,
-  conversation: <MessageSquare className="h-3.5 w-3.5" />,
-  fact:         <Lightbulb className="h-3.5 w-3.5" />,
-  preference:   <Heart className="h-3.5 w-3.5" />,
-  goal:         <Target className="h-3.5 w-3.5" />,
-  skill:        <Zap className="h-3.5 w-3.5" />,
+  project:      <FolderKanban className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  conversation: <MessageSquare className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  fact:         <Lightbulb className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  preference:   <Heart className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  goal:         <Target className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  skill:        <Zap className="h-3.5 w-3.5 [&_*]:fill-current [&_*]:[stroke:none]" />,
 }
 
 function formatDate(iso: string) {
@@ -34,11 +34,13 @@ function timeStr(iso: string) {
 
 interface ItemProps {
   node: MentalModelNode
+  selected?: boolean
   onEditRequest: (id: string) => void
+  onToggleSelect?: (id: string, multi: boolean) => void
   onUpdate?: (id: string, data: { title: string }) => void
 }
 
-function TimelineItem({ node, onEditRequest, onUpdate }: ItemProps) {
+function TimelineItem({ node, selected, onEditRequest, onToggleSelect, onUpdate }: ItemProps) {
   const decay = computeDecayScore(node)
   const isUnconfirmed = node.provenance === 'agent' && !node.confirmed
   const [editingTitle, setEditingTitle] = useState(false)
@@ -53,12 +55,20 @@ function TimelineItem({ node, onEditRequest, onUpdate }: ItemProps) {
 
   return (
     <button
-      onClick={() => onEditRequest(node.id)}
+      onClick={e => {
+        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+          onToggleSelect?.(node.id, true)
+        } else {
+          onEditRequest(node.id)
+        }
+      }}
       className={cn(
-        'w-full flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors group',
-        't-card/50 hover:t-card border border-transparent hover:t-border',
+        'w-full flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors group cursor-pointer',
+        selected
+          ? 't-accent-subtle t-accent-border border'
+          : 'border border-transparent hover:t-card hover:t-border',
         !node.active && 'opacity-40',
-        isUnconfirmed && 'border-l-2 border-l-amber-400/50',
+        isUnconfirmed && !selected && 'border-l-2 border-l-amber-400/50',
       )}
     >
       {/* Time */}
@@ -130,11 +140,13 @@ function TimelineItem({ node, onEditRequest, onUpdate }: ItemProps) {
 
 interface Props {
   nodes: MentalModelNode[]
+  selectedIds?: Set<string>
   onEditRequest: (id: string) => void
+  onToggleSelect?: (id: string, multi: boolean) => void
   onUpdate?: (id: string, data: { title: string }) => void
 }
 
-export function Timeline({ nodes, onEditRequest, onUpdate }: Props) {
+export function Timeline({ nodes, selectedIds, onEditRequest, onToggleSelect, onUpdate }: Props) {
   const sorted = [...nodes].sort((a, b) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
@@ -174,7 +186,7 @@ export function Timeline({ nodes, onEditRequest, onUpdate }: Props) {
             <div className="absolute left-[39px] top-0 bottom-0 w-px bg-white/8" />
             <div className="space-y-1">
               {group.items.map(node => (
-                <TimelineItem key={node.id} node={node} onEditRequest={onEditRequest} onUpdate={onUpdate} />
+                <TimelineItem key={node.id} node={node} selected={selectedIds?.has(node.id)} onEditRequest={onEditRequest} onToggleSelect={onToggleSelect} onUpdate={onUpdate} />
               ))}
             </div>
           </div>

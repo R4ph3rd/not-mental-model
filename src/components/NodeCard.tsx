@@ -13,12 +13,12 @@ import type { NodeFormData } from '@/store/mental-model-store'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
-  project:      <FolderKanban className="h-3 w-3" />,
-  conversation: <MessageSquare className="h-3 w-3" />,
-  fact:         <Lightbulb className="h-3 w-3" />,
-  preference:   <Heart className="h-3 w-3" />,
-  goal:         <Target className="h-3 w-3" />,
-  skill:        <Zap className="h-3 w-3" />,
+  project:      <FolderKanban className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  conversation: <MessageSquare className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  fact:         <Lightbulb className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  preference:   <Heart className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  goal:         <Target className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  skill:        <Zap className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
 }
 
 interface Props {
@@ -112,7 +112,8 @@ export function NodeCard({
         'group relative rounded-xl border flex flex-col transition-all cursor-pointer overflow-hidden',
         selected ? 't-accent-border t-accent-subtle ring-1 t-accent-ring' : 't-border t-card hover:border-white/20',
         !node.active && 'opacity-55',
-        isUnconfirmedAgent && 'border-l-2 border-l-amber-400/70',
+        isUnconfirmedAgent ? 'border-l-2 border-l-amber-400/70'
+          : (node.conversationIds?.length ?? 0) > 0 && 'border-l-2 border-l-violet-400/50',
       )}
     >
       {/* Hidden-from-agent overlay */}
