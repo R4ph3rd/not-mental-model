@@ -324,7 +324,7 @@ export function Sidebar({
           isDragging && 'opacity-40',
           isDropTarget && 'border-t-2 border-t-white/30',
         )}
-        onClick={() => onFocusNode(node.id)}
+        onClick={() => { onFocusNode(node.id); onEditNode(node.id) }}
         onContextMenu={e => openCtx(e, 'node', node.id)}
       >
         <GripVertical className="h-3 w-3 shrink-0 opacity-0 group-hover/node:opacity-30 cursor-grab" />
