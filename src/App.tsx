@@ -400,6 +400,8 @@ export default function App() {
                     groupFilter={groupFilter}
                     conversationFilter={conversationFilter}
                     onUpdateProject={updateProject}
+                    onConfirmNode={confirmNode}
+                    onDiscardNode={id => { deleteNode(id); setSelectedIds(p => { const n = new Set(p); n.delete(id); return n }) }}
                     focusNodeId={canvasFocusId}
                     onFocusConsumed={() => setCanvasFocusId(null)}
                     focusGroupId={canvasFocusGroupId}

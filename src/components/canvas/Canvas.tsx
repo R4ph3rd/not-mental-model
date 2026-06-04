@@ -26,6 +26,8 @@ interface Props {
   groupFilter?: string | null
   conversationFilter?: string | null
   onUpdateProject?: (id: string, data: { name?: string; color?: string }) => void
+  onConfirmNode?: (id: string) => void
+  onDiscardNode?: (id: string) => void
   focusNodeId?: string | null
   onFocusConsumed?: () => void
   focusGroupId?: string | null
@@ -57,7 +59,7 @@ export function Canvas({
   onToggleSelect, onDeleteNode,
   onToggleActive, onTogglePin, onToggleSensitive, onSetPosition, onEditRequest, onUpdate,
   projects, conversations, groups, groupFilter, conversationFilter,
-  onUpdateProject, focusNodeId, onFocusConsumed, focusGroupId, onFocusGroupConsumed,
+  onUpdateProject, onConfirmNode, onDiscardNode, focusNodeId, onFocusConsumed, focusGroupId, onFocusGroupConsumed,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pan, setPan] = useState({ x: 60, y: 60 })
@@ -349,6 +351,8 @@ export function Canvas({
               onToggleSensitive={onToggleSensitive}
               onDelete={id => { onDeleteNode(id) }}
               onUpdate={onUpdate}
+              onConfirm={onConfirmNode}
+              onDiscard={onDiscardNode}
             />
           )
         })}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Pin, Trash2, Lock, Unlock, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap, MoreVertical } from 'lucide-react'
+import { Eye, EyeOff, Pin, Trash2, Lock, Unlock, FolderKanban, MessageSquare, Lightbulb, Heart, Target, Zap, MoreVertical, Bot } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
@@ -8,12 +8,12 @@ import { CARD_W } from './layout'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
-  project:      <FolderKanban className="h-3 w-3" />,
-  conversation: <MessageSquare className="h-3 w-3" />,
-  fact:         <Lightbulb className="h-3 w-3" />,
-  preference:   <Heart className="h-3 w-3" />,
-  goal:         <Target className="h-3 w-3" />,
-  skill:        <Zap className="h-3 w-3" />,
+  project:      <FolderKanban className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  conversation: <MessageSquare className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  fact:         <Lightbulb className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  preference:   <Heart className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  goal:         <Target className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
+  skill:        <Zap className="h-3 w-3 [&_*]:fill-current [&_*]:[stroke:none]" />,
 }
 
 interface Props {
@@ -27,16 +27,19 @@ interface Props {
   onToggleSensitive?: (id: string) => void
   onDelete: (id: string) => void
   onUpdate?: (id: string, data: { title?: string }) => void
+  onConfirm?: (id: string) => void
+  onDiscard?: (id: string) => void
 }
 
 export function CanvasNode({
   node, position, selected, groupColor,
-  onMouseDown, onToggleActive, onTogglePin, onToggleSensitive, onDelete, onUpdate,
+  onMouseDown, onToggleActive, onTogglePin, onToggleSensitive, onDelete, onUpdate, onConfirm, onDiscard,
 }: Props) {
   const decay = computeDecayScore(node)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(node.title)
+  const isUnconfirmed = node.provenance === 'agent' && !node.confirmed
 
   function commitTitle() {
     setEditingTitle(false)
@@ -66,7 +69,7 @@ export function CanvasNode({
     >
       {/* Colored title bar */}
       <div className={cn('flex flex-col px-3 py-1.5 border-b shrink-0', CATEGORY_COLORS[node.category])}>
-        {/* Row 1: category icon + node title + status icons + 3-dots */}
+        {/* Row 1: category icon + node title + 3-dots */}
         <div className="flex items-center gap-1.5">
           <span className="shrink-0">{CATEGORY_ICONS[node.category]}</span>
           {editingTitle ? (
@@ -80,62 +83,16 @@ export function CanvasNode({
                 if (e.key === 'Escape') { setEditingTitle(false); setTitleDraft(node.title) }
               }}
               onMouseDown={e => e.stopPropagation()}
-              className="flex-1 min-w-0 bg-transparent text-[11px] font-semibold leading-none outline-none border-b border-white/40"
+              className="flex-1 min-w-0 bg-transparent text-[11px] font-semibold leading-snug outline-none border-b border-white/40"
             />
           ) : (
             <span
-              className="text-[11px] font-semibold leading-none flex-1 truncate cursor-text"
+              className="text-[11px] font-semibold leading-snug flex-1 truncate cursor-text"
               onDoubleClick={e => { e.stopPropagation(); setTitleDraft(node.title); setEditingTitle(true) }}
             >
               {node.title}
             </span>
           )}
-
-          {/* Active-state status icons */}
-          <div className="flex items-center gap-0.5 shrink-0">
-            {node.pinned && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className="h-5 w-5 flex items-center justify-center rounded text-amber-300"
-                    onMouseDown={e => e.stopPropagation()}
-                    onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
-                  >
-                    <Pin className="h-3 w-3" fill="currentColor" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Unpin</TooltipContent>
-              </Tooltip>
-            )}
-            {node.sensitive && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className="h-5 w-5 flex items-center justify-center rounded"
-                    onMouseDown={e => e.stopPropagation()}
-                    onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id) }}
-                  >
-                    <Lock className="h-3 w-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Sensitive — click to remove</TooltipContent>
-              </Tooltip>
-            )}
-            {!node.active && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className="h-5 w-5 flex items-center justify-center rounded text-red-300"
-                    onMouseDown={e => e.stopPropagation()}
-                    onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
-                  >
-                    <EyeOff className="h-3 w-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Hidden — click to show</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
 
           {/* 3-dots menu */}
           <div className="relative shrink-0">
@@ -193,13 +150,89 @@ export function CanvasNode({
           </div>
         </div>
 
-        {/* Row 2: memory type + confidence dot */}
+        {/* Row 2: memory type + confidence dot + right-aligned active status icons */}
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className={cn('text-[10px] opacity-70',
             node.memoryType === 'episodic' ? 'text-violet-200' : 'text-teal-200')}>
             {node.memoryType}
           </span>
           <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
+
+          <div className="flex-1" />
+
+          {/* Active-state status icons (right-aligned) */}
+          <div className="flex items-center gap-0.5">
+            {isUnconfirmed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="h-4 w-4 flex items-center justify-center rounded text-amber-400"
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <Bot className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[180px] p-2">
+                  <p className="text-[11px] mb-1.5">Agent extracted this — confirm to keep.</p>
+                  <div className="flex gap-1">
+                    <button
+                      className="flex-1 text-[10px] px-2 py-0.5 rounded border border-green-500/40 text-green-300 hover:bg-green-500/10 transition-colors"
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={e => { e.stopPropagation(); onConfirm?.(node.id) }}
+                    >Keep</button>
+                    <button
+                      className="flex-1 text-[10px] px-2 py-0.5 rounded border border-red-500/40 text-red-300 hover:bg-red-500/10 transition-colors"
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={e => { e.stopPropagation(); onDiscard?.(node.id) }}
+                    >Discard</button>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {node.pinned && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="h-4 w-4 flex items-center justify-center rounded text-amber-300"
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
+                  >
+                    <Pin className="h-3 w-3" fill="currentColor" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Unpin</TooltipContent>
+              </Tooltip>
+            )}
+            {node.sensitive && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="h-4 w-4 flex items-center justify-center rounded"
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); onToggleSensitive?.(node.id) }}
+                  >
+                    <Lock className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Sensitive — click to remove</TooltipContent>
+              </Tooltip>
+            )}
+            {!node.active && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="h-4 w-4 flex items-center justify-center rounded text-red-300"
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
+                  >
+                    <EyeOff className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Hidden — click to show</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </div>
 
