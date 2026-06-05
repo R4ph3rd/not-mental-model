@@ -323,6 +323,7 @@ function NodePreview({ nodes }: { nodes: MentalModelNode[] | null }) {
 
 export function ClaudeSync({ onImport, onClose, selectedNodes, onSummary, defaultTab = 'extract' }: Props) {
   const [provider, setProvider] = useState(getDefaultProvider)
+  const [tab, setTab] = useState<'extract' | 'memory' | 'summarize'>(defaultTab)
 
   return (
     <div className="space-y-4">
@@ -338,7 +339,7 @@ export function ClaudeSync({ onImport, onClose, selectedNodes, onSummary, defaul
 
       <ProviderPicker value={provider} onChange={setProvider} />
 
-      <Tabs defaultValue={defaultTab}>
+      <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
         <TabsList className="w-full">
           <TabsTrigger value="extract" className="flex-1">
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />Extract
@@ -352,16 +353,31 @@ export function ClaudeSync({ onImport, onClose, selectedNodes, onSummary, defaul
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="extract" className="mt-3">
-          <ExtractTab provider={provider} onImport={onImport} onClose={onClose} />
+        <TabsContent value="extract" forceMount className="mt-3 !mt-0">
+          <div className={cn('grid transition-[grid-template-rows] duration-300 ease-in-out mt-3',
+            tab === 'extract' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+            <div className="overflow-hidden min-h-0">
+              <ExtractTab provider={provider} onImport={onImport} onClose={onClose} />
+            </div>
+          </div>
         </TabsContent>
-        <TabsContent value="memory" className="mt-3">
-          <MemoryTab provider={provider} onImport={onImport} onClose={onClose} />
+        <TabsContent value="memory" forceMount className="mt-3 !mt-0">
+          <div className={cn('grid transition-[grid-template-rows] duration-300 ease-in-out mt-3',
+            tab === 'memory' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+            <div className="overflow-hidden min-h-0">
+              <MemoryTab provider={provider} onImport={onImport} onClose={onClose} />
+            </div>
+          </div>
         </TabsContent>
-        <TabsContent value="summarize" className="mt-3">
-          {selectedNodes && onSummary && (
-            <SummarizeTab provider={provider} nodes={selectedNodes} onSummary={onSummary} onClose={onClose} />
-          )}
+        <TabsContent value="summarize" forceMount className="mt-3 !mt-0">
+          <div className={cn('grid transition-[grid-template-rows] duration-300 ease-in-out mt-3',
+            tab === 'summarize' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+            <div className="overflow-hidden min-h-0">
+              {selectedNodes && onSummary && (
+                <SummarizeTab provider={provider} nodes={selectedNodes} onSummary={onSummary} onClose={onClose} />
+              )}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
