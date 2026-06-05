@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_CONFIGS, callProvider, getDefaultProvider } from '@/lib/providers'
 import { getMem0Config, mem0Search, mem0Add, type Mem0Memory } from '@/lib/mem0'
+import { computeDecayScore } from '@/lib/decay'
 import { cn } from '@/lib/utils'
 import type { MentalModelNode, NodeCategory, ConfidenceLevel, MemoryGroup } from '@/types/mental-model'
 
@@ -81,7 +82,7 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
           'user background knowledge preferences goals skills projects',
           PRIME_LIMIT * 2,
         )
-        // Re-rank: blend mem0 semantic score (60%) with stored importance (40%)
+        // Re-rank: mem0 semantic score (50%) + importance (25%) + decay (25%)
         const ranked = found
           .map(m => {
             const node = nodes.find(n =>
@@ -89,7 +90,8 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
               m.memory.toLowerCase().includes(n.title.toLowerCase())
             )
             const importance = (m.metadata?.importance as number | undefined) ?? node?.importance ?? 0.5
-            const combined = (m.score ?? 0.5) * 0.6 + importance * 0.4
+            const decay = node ? computeDecayScore(node) : 0.5
+            const combined = (m.score ?? 0.5) * 0.5 + importance * 0.25 + decay * 0.25
             return { m, node, combined }
           })
           .sort((a, b) => b.combined - a.combined)
@@ -101,13 +103,14 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
           score: m.score,
         }))
       } else {
-        // Fallback: top active non-sensitive nodes sorted by importance
+        // Fallback: top active non-sensitive nodes ranked by decay × 0.5 + importance × 0.5
         const inactiveGroups = new Set(groups.filter(g => !g.active).map(g => g.id))
         primed = nodes
           .filter(n => n.active && !n.sensitive && !n.groupIds.some(gid => inactiveGroups.has(gid)))
-          .sort((a, b) => b.importance - a.importance)
+          .map(n => ({ n, rank: computeDecayScore(n) * 0.5 + n.importance * 0.5 }))
+          .sort((a, b) => b.rank - a.rank)
           .slice(0, PRIME_LIMIT)
-          .map(n => ({ text: `${n.title}: ${n.content}`, nodeId: n.id, nodeTitle: n.title }))
+          .map(({ n }) => ({ text: `${n.title}: ${n.content}`, nodeId: n.id, nodeTitle: n.title }))
       }
 
       setPrimedMemories(primed)
