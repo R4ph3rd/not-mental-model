@@ -514,6 +514,12 @@ export function useMentalModelStore() {
     })
   }, [mutateNodes])
 
+  const bumpAccess = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
+    const ts = now()
+    mutateNodes(prev => prev.map(n => ids.includes(n.id) ? { ...n, lastAccessedAt: ts } : n))
+  }, [mutateNodes])
+
   const addSummaryNode = useCallback((summary: { title: string; content: string; tags: string[]; scope: string }) => {
     const node: MentalModelNode = {
       id: uid(), category: 'fact',
@@ -612,7 +618,7 @@ export function useMentalModelStore() {
   return {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
-    linkNodes, unlinkNodes, importNodes, addSummaryNode,
+    linkNodes, unlinkNodes, importNodes, addSummaryNode, bumpAccess,
     projects, addProject, updateProject, deleteProject,
     conversations, addConversation, updateConversation, deleteConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,

@@ -33,7 +33,7 @@ export default function App() {
   const {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
-    importNodes, addSummaryNode,
+    importNodes, addSummaryNode, bumpAccess,
     projects, addProject, updateProject, deleteProject,
     conversations, addConversation, updateConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
@@ -524,6 +524,7 @@ const filtered = useMemo(() => {
                 nodes={nodes}
                 groups={groups}
                 onAgentNodes={handleAgentNodes}
+                onBumpAccess={bumpAccess}
                 onClose={() => setChatOpen(false)}
               />
             )}

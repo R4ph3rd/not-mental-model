@@ -27,6 +27,7 @@ interface Props {
   onAgentNodes: (nodes: Array<{
     title: string; content: string; category: NodeCategory; confidence: ConfidenceLevel
   }>) => void
+  onBumpAccess?: (ids: string[]) => void
   onClose: () => void
 }
 
@@ -48,7 +49,7 @@ const PRIME_LIMIT = 12
 // How many to search per message
 const RECALL_LIMIT = 6
 
-export function ChatPanel({ nodes, groups, onAgentNodes, onClose }: Props) {
+export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }: Props) {
   const [provider, setProvider] = useState(getDefaultProvider)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -166,6 +167,9 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onClose }: Props) {
       if (mem0 && !memoPaused) {
         const found = await mem0Search(mem0.apiKey, mem0.userId, text, RECALL_LIMIT)
         recalledMemories = matchToNodes(found)
+        // Bump lastAccessedAt so decay recency reflects actual usage
+        const accessedIds = recalledMemories.flatMap(m => m.nodeId ? [m.nodeId] : [])
+        if (accessedIds.length) onBumpAccess?.(accessedIds)
       }
 
       const primedBlock  = primedMemories.length ? formatMemories(primedMemories)  : ''
