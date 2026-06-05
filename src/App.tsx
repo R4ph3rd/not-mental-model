@@ -72,9 +72,19 @@ export default function App() {
   }
 
   function handleSidebarAddNode(ctx: { groupId?: string; conversationId?: string }) {
+    const targetProjectId = ctx.groupId && projects.some(p => p.id === ctx.groupId) ? ctx.groupId : undefined
+    const extraGroupIds   = ctx.groupId && !targetProjectId ? [ctx.groupId] : []
+    const n = addNode(
+      { category: 'fact', title: '', content: '', tags: [], confidence: 'medium',
+        source: '', memoryType: 'semantic', scope: '', importance: 0.5,
+        provenance: 'user', confirmed: true, sensitive: false,
+        groupIds: extraGroupIds },
+      targetProjectId,
+      ctx.conversationId ? [ctx.conversationId] : undefined,
+    )
     if (ctx.groupId) setGroupFilter(ctx.groupId)
     if (ctx.conversationId) setConversationFilter(ctx.conversationId)
-    setAddOpen(true)
+    setInspectorId(n.id)
   }
 
   function handleDuplicateNode(id: string) {
