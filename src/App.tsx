@@ -120,15 +120,29 @@ export default function App() {
   }
 
   function handleCopyContext() {
-    const active = nodes.filter(isNodeVisibleToAgent)
+    let active = nodes.filter(isNodeVisibleToAgent)
+    // Respect active scope filter so users can copy just Work / Personal / etc.
+    if (conversationFilter) {
+      active = active.filter(n => n.conversationIds.includes(conversationFilter))
+    } else if (groupFilter) {
+      active = active.filter(n => n.projectId === groupFilter || n.groupIds.includes(groupFilter))
+    }
     if (active.length === 0) return
+
+    const scopeName = conversationFilter
+      ? (conversations.find(c => c.id === conversationFilter)?.title ?? 'conversation')
+      : groupFilter
+        ? (groups.find(g => g.id === groupFilter)?.name ?? 'group')
+        : null
+
     const grouped: Record<string, typeof active> = {}
     for (const n of active) {
       const key = n.category.charAt(0).toUpperCase() + n.category.slice(1) + 's'
       ;(grouped[key] ??= []).push(n)
     }
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    const lines = [`## My context — ${date}\n`]
+    const heading = scopeName ? `## My context (${scopeName}) — ${date}` : `## My context — ${date}`
+    const lines = [`${heading}\n`]
     for (const [grp, items] of Object.entries(grouped)) {
       lines.push(`### ${grp}`)
       for (const n of items) lines.push(`- **${n.title}**: ${n.content}`)
@@ -338,7 +352,13 @@ export default function App() {
 
             <div className="ml-auto flex items-center gap-1.5">
               <Button size="sm" variant="ghost" onClick={handleCopyContext}
-                title="Copy active (non-sensitive) nodes as context — paste into any AI chat">
+                title={
+                  conversationFilter
+                    ? `Copy context for this conversation`
+                    : groupFilter
+                      ? `Copy context for this group`
+                      : 'Copy all context — paste into any AI chat'
+                }>
                 {copied ? <ClipboardCheck className="h-3.5 w-3.5 text-green-400" /> : <Clipboard className="h-3.5 w-3.5" />}
               </Button>
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
