@@ -11,7 +11,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Sidebar } from '@/components/Sidebar'
 import { NodeCard } from '@/components/NodeCard'
-import { NodeForm } from '@/components/NodeForm'
 import { ClaudeSync } from '@/components/ClaudeSync'
 import { StatsBar } from '@/components/StatsBar'
 import { Canvas } from '@/components/canvas/Canvas'
@@ -45,7 +44,6 @@ export default function App() {
   const [conversationFilter, setConversationFilter] = useState<string | null>(null)
   const [search, setSearch]                         = useState('')
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
-  const [addOpen, setAddOpen]           = useState(false)
   const [aiOpen, setAiOpen]             = useState(false)
   const [aiTab, setAiTab]               = useState<'extract' | 'summarize'>('extract')
   const [inspectorId, setInspectorId]   = useState<string | null>(null)
@@ -348,7 +346,19 @@ export default function App() {
                 onClick={() => openInfer('explore-infer')}>
                 <Telescope className="h-3.5 w-3.5 t-accent" />Explore
               </Button>
-              <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Button size="sm" onClick={() => {
+                const targetProjectId = groupFilter && projects.some(p => p.id === groupFilter) ? groupFilter : undefined
+                const extraGroupIds   = groupFilter && !targetProjectId ? [groupFilter] : []
+                const n = addNode(
+                  { category: 'fact', title: '', content: '', tags: [], confidence: 'medium',
+                    source: '', memoryType: 'semantic', scope: '', importance: 0.5,
+                    provenance: 'user', confirmed: true, sensitive: false,
+                    groupIds: extraGroupIds },
+                  targetProjectId,
+                  conversationFilter ? [conversationFilter] : undefined,
+                )
+                setInspectorId(n.id)
+              }}>
                 <Plus className="h-3.5 w-3.5" />Add
               </Button>
               <Button size="icon" variant="ghost" className="h-8 w-8"
@@ -532,27 +542,7 @@ export default function App() {
           </div>
         </div>
 
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogContent>
-            <p className="text-sm font-semibold t-text mb-1">Add node</p>
-            <NodeForm
-              onSubmit={data => {
-                const gid = groupFilter ?? undefined
-                const targetProjectId = gid && projects.some(p => p.id === gid) ? gid : undefined
-                const extraGroupIds   = gid && !targetProjectId ? [gid] : []
-                addNode(
-                  { ...data, groupIds: [...new Set([...(data.groupIds ?? []), ...extraGroupIds])] },
-                  targetProjectId,
-                  conversationFilter ? [conversationFilter] : undefined,
-                )
-                setAddOpen(false)
-              }}
-              onCancel={() => setAddOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+<Dialog open={aiOpen} onOpenChange={setAiOpen}>
           <DialogContent className="max-w-xl">
             <ClaudeSync
               onImport={importNodes}
