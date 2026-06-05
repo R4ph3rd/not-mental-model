@@ -68,7 +68,7 @@ function TimelineItem({ node, selected, onEditRequest, onToggleSelect, onUpdate 
           ? 't-accent-subtle t-accent-border border'
           : 'border border-transparent hover:bg-white/[0.05] hover:border-white/[0.08]',
         !node.active && 'opacity-40',
-        isUnconfirmed && !selected && 'border-l-2 border-l-amber-400/50',
+        isUnconfirmed && !selected && 'border-l-2 border-l-amber-400/50 hover:border-l-amber-400/50',
       )}
     >
       {/* Time */}
