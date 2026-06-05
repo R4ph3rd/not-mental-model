@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
-  Share2, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare, Telescope, Bot,
+  Download, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare, Telescope, Bot,
   Network, FolderOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -334,7 +334,7 @@ export default function App() {
                 {copied ? <ClipboardCheck className="h-3.5 w-3.5 text-green-400" /> : <Clipboard className="h-3.5 w-3.5" />}
               </Button>
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
-                <Share2 className="h-3.5 w-3.5" />
+                <Download className="h-3.5 w-3.5" />Export
               </Button>
               <Button size="sm" variant={chatOpen ? 'secondary' : 'outline'}
                 onClick={() => { setChatOpen(v => !v); setSettingsOpen(false) }}>
