@@ -56,11 +56,9 @@ function TimelineItem({ node, selected, onEditRequest, onToggleSelect, onUpdate 
   return (
     <button
       onClick={e => {
-        if (e.ctrlKey || e.metaKey || e.shiftKey) {
-          onToggleSelect?.(node.id, true)
-        } else {
-          onEditRequest(node.id)
-        }
+        const multi = e.ctrlKey || e.metaKey || e.shiftKey
+        onToggleSelect?.(node.id, multi)
+        if (!multi) onEditRequest(node.id)
       }}
       className={cn(
         'w-full flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors group cursor-pointer',
