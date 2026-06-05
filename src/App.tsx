@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
   Download, FolderInput, Settings, MessageSquare, Telescope, Bot,
-  Network, FolderOpen,
+  Network, FolderOpen, AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { NodeCard } from '@/components/NodeCard'
 import { ClaudeSync } from '@/components/ClaudeSync'
 import { StatsBar } from '@/components/StatsBar'
+import { StaleReviewPanel, staleCount } from '@/components/StaleReviewPanel'
 import { CopyContextButton } from '@/components/CopyContextButton'
 import { Canvas } from '@/components/canvas/Canvas'
 import { GraphView } from '@/components/graph/GraphView'
@@ -46,6 +47,7 @@ export default function App() {
   const [search, setSearch]                         = useState('')
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [aiOpen, setAiOpen]             = useState(false)
+  const [staleOpen, setStaleOpen]       = useState(false)
   const [aiTab, setAiTab]               = useState<'extract' | 'summarize'>('extract')
   const [inspectorId, setInspectorId]   = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -136,6 +138,7 @@ const filtered = useMemo(() => {
   }, [nodes, categoryFilter, conversationFilter, groupFilter, search])
 
   const activeCount   = useMemo(() => nodes.filter(isNodeVisibleToAgent).length, [nodes, inactiveGroupIds])
+  const nStale        = useMemo(() => staleCount(nodes), [nodes])
 
   type GridSection = { id: string; name: string; color: string; items: MentalModelNode[] }
   const gridSections = useMemo((): GridSection[] | null => {
@@ -351,6 +354,16 @@ const filtered = useMemo(() => {
               }}>
                 <Plus className="h-3.5 w-3.5" />Add
               </Button>
+              {nStale > 0 && (
+                <button
+                  onClick={() => setStaleOpen(v => !v)}
+                  title={`${nStale} stale node${nStale > 1 ? 's' : ''} — click to review`}
+                  className="relative flex items-center gap-1 text-[11px] text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 rounded-lg px-2 h-8 transition-colors"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {nStale}
+                </button>
+              )}
               <Button size="icon" variant="ghost" className="h-8 w-8"
                 onClick={() => { setSettingsOpen(v => !v); setChatOpen(false) }} title="Settings">
                 <Settings className="h-4 w-4" />
@@ -530,6 +543,17 @@ const filtered = useMemo(() => {
             )}
 
             {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+            {staleOpen && (
+              <div className="w-80 shrink-0 border-l t-border flex flex-col overflow-hidden">
+                <StaleReviewPanel
+                  nodes={nodes}
+                  onToggleActive={toggleActive}
+                  onTogglePin={togglePin}
+                  onBumpAccess={bumpAccess}
+                  onClose={() => setStaleOpen(false)}
+                />
+              </div>
+            )}
           </div>
         </div>
 
