@@ -1,0 +1,74 @@
+name: Deploy MCP server to Hostinger
+
+on:
+  push:
+    branches: [mcp-server]
+    paths:
+      - 'mcp-server/**'
+      - '.github/workflows/deploy-mcp-server.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: SSH deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key:      ${{ secrets.HOSTINGER_SSH_KEY }}
+          port:     ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            # ── Paths ──────────────────────────────────────────────
+            DEPLOY_DIR="$HOME/apps/mental-model-mcp"
+            mkdir -p "$DEPLOY_DIR"
+
+            # ── Sync server files (rsync via stdin not available in
+            #    appleboy/ssh-action; we use git instead) ───────────
+            cd "$DEPLOY_DIR"
+
+            if [ ! -d ".git" ]; then
+              git init
+              git remote add origin "https://github.com/${{ github.repository }}.git"
+            fi
+
+            git fetch origin mcp-server --depth=1
+            git checkout -f FETCH_HEAD -- mcp-server/
+
+            # Move files up from the mcp-server/ subfolder
+            cp -r mcp-server/. .
+            rm -rf mcp-server/
+
+            # ── Install dependencies ───────────────────────────────
+            npm install --omit=dev
+
+            # ── Write .env from secrets (only on first deploy or if
+            #    the file doesn't exist — never overwrite existing) ─
+            if [ ! -f .env ]; then
+              cat > .env <<EOF
+            PORT=${{ secrets.MCP_PORT || 3741 }}
+            API_KEY=${{ secrets.MCP_API_KEY }}
+            SNAPSHOT_FILE=$DEPLOY_DIR/snapshot.json
+            EOF
+            fi
+
+            # ── Start or restart with PM2 ─────────────────────────
+            if pm2 list | grep -q "mental-model-mcp"; then
+              pm2 restart mental-model-mcp
+            else
+              pm2 start server.js \
+                --name mental-model-mcp \
+                --env production \
+                --log "$DEPLOY_DIR/mcp.log" \
+                --time
+              pm2 save
+            fi
+
+            echo "✓ mental-model-mcp deployed at port ${{ secrets.MCP_PORT || 3741 }}"
