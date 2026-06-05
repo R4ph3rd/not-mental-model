@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
-  Download, FolderInput, Settings, Clipboard, ClipboardCheck, MessageSquare, Telescope, Bot,
+  Download, FolderInput, Settings, MessageSquare, Telescope, Bot,
   Network, FolderOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { NodeCard } from '@/components/NodeCard'
 import { ClaudeSync } from '@/components/ClaudeSync'
 import { StatsBar } from '@/components/StatsBar'
+import { CopyContextButton } from '@/components/CopyContextButton'
 import { Canvas } from '@/components/canvas/Canvas'
 import { GraphView } from '@/components/graph/GraphView'
 import { Timeline } from '@/views/Timeline'
@@ -50,7 +51,6 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [chatOpen, setChatOpen]         = useState(false)
   const [onboardingDone, setOnboardingDone] = useState(() => !!localStorage.getItem('mm-onboarding-done'))
-  const [copied, setCopied] = useState(false)
   const [inferMode, setInferMode] = useState<InferenceMode | null>(null)
   const [inferSourceNodes, setInferSourceNodes] = useState<typeof nodes | null>(null)
   const [canvasFocusId, setCanvasFocusId]           = useState<string | null>(null)
@@ -119,32 +119,7 @@ export default function App() {
     return true
   }
 
-  function handleCopyContext() {
-    const active = nodes.filter(isNodeVisibleToAgent)
-    if (active.length === 0) return
-    const grouped: Record<string, typeof active> = {}
-    for (const n of active) {
-      const key = n.category.charAt(0).toUpperCase() + n.category.slice(1) + 's'
-      ;(grouped[key] ??= []).push(n)
-    }
-    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    const lines = [`## My context — ${date}\n`]
-    for (const [grp, items] of Object.entries(grouped)) {
-      lines.push(`### ${grp}`)
-      for (const n of items) lines.push(`- **${n.title}**: ${n.content}`)
-      lines.push('')
-    }
-    lines.push('---')
-    lines.push(
-      'This context was exported from my personal knowledge graph and reflects my up-to-date information. ' +
-      'If any of the above differs from or adds to what you already know about me, please update your memory accordingly.'
-    )
-    navigator.clipboard.writeText(lines.join('\n'))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const filtered = useMemo(() => {
+const filtered = useMemo(() => {
     let list = nodes
     if (conversationFilter) list = list.filter(n => n.conversationIds.includes(conversationFilter))
     else if (groupFilter) list = list.filter(n => n.projectId === groupFilter || n.groupIds.includes(groupFilter))
@@ -337,10 +312,15 @@ export default function App() {
             </div>
 
             <div className="ml-auto flex items-center gap-1.5">
-              <Button size="sm" variant="ghost" onClick={handleCopyContext}
-                title="Copy active (non-sensitive) nodes as context — paste into any AI chat">
-                {copied ? <ClipboardCheck className="h-3.5 w-3.5 text-green-400" /> : <Clipboard className="h-3.5 w-3.5" />}
-              </Button>
+              <CopyContextButton
+                allNodes={nodes}
+                filteredNodes={filtered}
+                isVisible={isNodeVisibleToAgent}
+                groupLabel={groupFilter ? (groups.find(g => g.id === groupFilter)?.name) : undefined}
+                conversationLabel={conversationFilter ? (conversations.find(c => c.id === conversationFilter)?.title) : undefined}
+                categoryFilter={categoryFilter}
+                hasSearch={!!search.trim()}
+              />
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
                 <Download className="h-3.5 w-3.5" />Export
               </Button>
