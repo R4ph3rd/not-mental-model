@@ -125,84 +125,84 @@ export function NodeCard({
         </div>
       )}
 
-      {/* ── Colored category title bar ─────────────────────────── */}
-      <div className={cn('flex items-center gap-1.5 px-3 py-1.5 border-b', CATEGORY_COLORS[node.category])}>
-        {CATEGORY_ICONS[node.category]}
-        <span className="text-[11px] font-semibold">{CATEGORY_LABELS[node.category]}</span>
-        <span className={cn('text-[10px] opacity-70 ml-0.5',
-          node.memoryType === 'episodic' ? 'text-violet-200' : 'text-teal-200')}>
-          {node.memoryType}
-        </span>
-
-        {/* Provenance badges */}
-        {node.provenance === 'agent' && (
-          <span className={cn('text-[10px] flex items-center gap-0.5 opacity-90',
-            node.confirmed ? 'opacity-60' : 'text-amber-300')}>
-            <Bot className="h-2.5 w-2.5" />
-            {!node.confirmed && 'unconfirmed'}
-          </span>
-        )}
-        {node.provenance === 'extracted' && (
-          <span className="text-[10px] opacity-60 flex items-center gap-0.5">
-            <Sparkles className="h-2.5 w-2.5" />
-          </span>
-        )}
-
-        {/* Action buttons — slide in from right on hover */}
-        <div className="flex items-center gap-0 ml-auto translate-x-1 group-hover:translate-x-0 transition-transform duration-150">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
-                  node.sensitive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
-                onClick={e => { e.stopPropagation(); onUpdate(node.id, { sensitive: !node.sensitive }) }}
-              >
-                {node.sensitive ? <Lock className="h-3 w-3 [&_rect]:fill-current [&_path]:fill-none [&_path]:[stroke-width:2.5]" /> : <Unlock className="h-3 w-3" />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{node.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
-                  node.pinned ? 'text-amber-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
-                onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
-              >
-                <Pin className="h-3 w-3" fill={node.pinned ? 'currentColor' : 'none'} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{node.pinned ? 'Unpin' : 'Pin (prevent decay)'}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
-                  !node.active ? 'text-red-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
-                onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
-              >
-                {node.active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{node.active ? 'Hide from agent' : 'Show to agent'}</TooltipContent>
-          </Tooltip>
-
-          <button
-            className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:text-red-300 hover:!opacity-100 transition-all duration-150"
-            onClick={e => { e.stopPropagation(); onDelete(node.id) }}>
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Title ───────────────────────────────────────────────── */}
-      <div className="px-3 pt-2.5 pb-1">
-        <div className="flex items-start gap-2">
+      {/* ── Colored category bar ─────────────────────────────── */}
+      <div className={cn('flex flex-col px-3 py-1.5 border-b', CATEGORY_COLORS[node.category])}>
+        {/* Row 1: icon + title */}
+        <div className="flex items-start gap-1.5 pr-5 relative">
+          <span className="shrink-0 mt-0.5">{CATEGORY_ICONS[node.category]}</span>
           <InlineText tag="h3" value={node.title} onSave={v => onUpdate(node.id, { title: v })}
-            className="text-sm font-semibold t-text leading-snug flex-1" />
-          <span className={cn('text-xs shrink-0 mt-0.5', CONFIDENCE_COLORS[node.confidence])}>●</span>
+            className="text-[11px] font-semibold leading-snug flex-1 min-w-0 break-words" />
+        </div>
+
+        {/* Row 2: category label + memoryType + confidence + provenance + actions */}
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className="text-[10px] font-semibold opacity-80">{CATEGORY_LABELS[node.category]}</span>
+          <span className={cn('text-[10px] opacity-70',
+            node.memoryType === 'episodic' ? 'text-violet-200' : 'text-teal-200')}>
+            {node.memoryType}
+          </span>
+          <span className={cn('text-[10px]', CONFIDENCE_COLORS[node.confidence])}>●</span>
+
+          {node.provenance === 'agent' && (
+            <span className={cn('text-[10px] flex items-center gap-0.5',
+              node.confirmed ? 'opacity-60' : 'text-amber-300')}>
+              <Bot className="h-2.5 w-2.5" />
+              {!node.confirmed && 'unconfirmed'}
+            </span>
+          )}
+          {node.provenance === 'extracted' && (
+            <span className="text-[10px] opacity-60 flex items-center gap-0.5">
+              <Sparkles className="h-2.5 w-2.5" />
+            </span>
+          )}
+
+          {/* Action buttons — slide in from right on hover */}
+          <div className="flex items-center gap-0 ml-auto translate-x-1 group-hover:translate-x-0 transition-transform duration-150">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
+                    node.sensitive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
+                  onClick={e => { e.stopPropagation(); onUpdate(node.id, { sensitive: !node.sensitive }) }}
+                >
+                  {node.sensitive ? <Lock className="h-3 w-3 [&_rect]:fill-current [&_path]:fill-none [&_path]:[stroke-width:2.5]" /> : <Unlock className="h-3 w-3" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{node.sensitive ? 'Sensitive — excluded from context' : 'Mark as sensitive'}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
+                    node.pinned ? 'text-amber-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
+                  onClick={e => { e.stopPropagation(); onTogglePin(node.id) }}
+                >
+                  <Pin className="h-3 w-3" fill={node.pinned ? 'currentColor' : 'none'} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{node.pinned ? 'Unpin' : 'Pin (prevent decay)'}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn('h-5 w-5 flex items-center justify-center rounded transition-all duration-150',
+                    !node.active ? 'text-red-300 opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100')}
+                  onClick={e => { e.stopPropagation(); onToggleActive(node.id) }}
+                >
+                  {node.active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{node.active ? 'Hide from agent' : 'Show to agent'}</TooltipContent>
+            </Tooltip>
+
+            <button
+              className="h-5 w-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:text-red-300 hover:!opacity-100 transition-all duration-150"
+              onClick={e => { e.stopPropagation(); onDelete(node.id) }}>
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
 
