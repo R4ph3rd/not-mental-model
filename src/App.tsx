@@ -24,6 +24,10 @@ import { ChatPanel } from '@/components/ChatPanel'
 import { Onboarding } from '@/components/Onboarding'
 import { InferenceModal } from '@/components/InferenceModal'
 import type { InferenceMode } from '@/components/InferenceModal'
+import { DedupReviewModal } from '@/components/DedupReviewModal'
+import type { ResolvedAction } from '@/components/DedupReviewModal'
+import { classifyIncoming } from '@/lib/dedup'
+import type { ClassifiedNode } from '@/lib/dedup'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import type { NodeCategory, MentalModelNode } from '@/types/mental-model'
@@ -48,6 +52,11 @@ export default function App() {
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [aiOpen, setAiOpen]             = useState(false)
   const [staleOpen, setStaleOpen]       = useState(false)
+  const [pendingImport, setPendingImport] = useState<{
+    classified: ClassifiedNode[]
+    cleanCount: number
+    onApply: (actions: ResolvedAction[]) => void
+  } | null>(null)
   const [aiTab, setAiTab]               = useState<'extract' | 'summarize'>('extract')
   const [inspectorId, setInspectorId]   = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -206,8 +215,21 @@ const filtered = useMemo(() => {
   }
 
   // Chat / inference: auto-extracts nodes (Governance paper: provenance = 'agent')
+  function doAddAgentNodes(
+    raw: Array<{ title: string; content: string; category: NodeCategory; confidence: 'high' | 'medium' | 'low' }>,
+    targetProject?: string,
+    targetConvs?: string[],
+  ) {
+    for (const n of raw) {
+      addNode({
+        ...n, tags: [], source: 'chat-auto', memoryType: 'semantic',
+        scope: '', importance: 0.7,
+        provenance: 'agent', confirmed: false, sensitive: false,
+      }, targetProject, targetConvs)
+    }
+  }
+
   function handleAgentNodes(raw: Array<{ title: string; content: string; category: NodeCategory; confidence: 'high' | 'medium' | 'low' }>) {
-    // target project = current group filter if it maps to a project
     let targetProject = groupFilter && projects.some(p => p.id === groupFilter) ? groupFilter : undefined
     if (!targetProject && inferMode === 'from-selection') {
       const counts: Record<string, number> = {}
@@ -216,13 +238,67 @@ const filtered = useMemo(() => {
       if (top) targetProject = top[0]
     }
     const targetConvs = conversationFilter ? [conversationFilter] : undefined
-    for (const n of raw) {
-      addNode({
-        ...n, tags: [], source: 'chat-auto', memoryType: 'semantic',
-        scope: '', importance: 0.7,
-        provenance: 'agent', confirmed: false, sensitive: false,
-      }, targetProject, targetConvs)
+
+    const { needsReview, clean } = classifyIncoming(
+      raw.map(n => ({ ...n, tags: [], source: 'chat-auto', memoryType: 'semantic', scope: '', importance: 0.7 })),
+      nodes,
+    )
+    // Add clean nodes immediately
+    doAddAgentNodes(clean as typeof raw, targetProject, targetConvs)
+    // Queue conflict/duplicate nodes for review
+    if (needsReview.length > 0) {
+      setPendingImport({
+        classified: needsReview,
+        cleanCount: clean.length,
+        onApply: actions => applyDedupActions(actions, { targetProject, targetConvs }),
+      })
     }
+  }
+
+  function handleImportWithDedup(incoming: import('@/types/mental-model').MentalModelNode[]) {
+    const { needsReview, clean } = classifyIncoming(incoming, nodes)
+    importNodes(clean as import('@/types/mental-model').MentalModelNode[])
+    if (needsReview.length > 0) {
+      setPendingImport({
+        classified: needsReview,
+        cleanCount: clean.length,
+        onApply: actions => applyDedupActions(actions, {}),
+      })
+    }
+  }
+
+  function applyDedupActions(
+    actions: ResolvedAction[],
+    ctx: { targetProject?: string; targetConvs?: string[] },
+  ) {
+    for (const action of actions) {
+      if (action.kind === 'skip') continue
+      if (action.kind === 'replace' || action.kind === 'merge') {
+        deleteNode(action.replaceId)
+      }
+      const nodeData = action.kind === 'merge' ? { ...action.base, ...action.merged } : action.node
+      const n = nodeData as Record<string, unknown>
+      addNode(
+        {
+          title:      (n.title as string)    ?? '',
+          content:    (n.content as string)  ?? '',
+          category:   (n.category as NodeCategory) ?? 'fact',
+          confidence: (n.confidence as import('@/types/mental-model').ConfidenceLevel) ?? 'medium',
+          tags:       (n.tags as string[])   ?? [],
+          source:     (n.source as string)   ?? '',
+          memoryType: (n.memoryType as import('@/types/mental-model').MemoryType) ?? 'semantic',
+          scope:      (n.scope as string)    ?? '',
+          importance: (n.importance as number) ?? 0.7,
+          provenance: (n.provenance as import('@/types/mental-model').Provenance) ?? 'extracted',
+          confirmed:  (n.confirmed as boolean) ?? true,
+          sensitive:  (n.sensitive as boolean) ?? false,
+          groupIds:   (n.groupIds as string[]) ?? [],
+        },
+        ctx.targetProject,
+        ctx.targetConvs,
+      )
+    }
+    setPendingImport(null)
   }
 
   function handleMoveNodeToGroup(nodeId: string, groupId: string) {
@@ -557,10 +633,24 @@ const filtered = useMemo(() => {
           </div>
         </div>
 
+        <Dialog open={!!pendingImport} onOpenChange={open => { if (!open) setPendingImport(null) }}>
+          <DialogContent className="max-w-2xl">
+            {pendingImport && (
+              <DedupReviewModal
+                classified={pendingImport.classified}
+                cleanCount={pendingImport.cleanCount}
+                existingNodes={nodes}
+                onResolve={pendingImport.onApply}
+                onCancel={() => setPendingImport(null)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
 <Dialog open={aiOpen} onOpenChange={setAiOpen}>
           <DialogContent className="max-w-xl">
             <ClaudeSync
-              onImport={importNodes}
+              onImport={handleImportWithDedup}
               onClose={() => setAiOpen(false)}
               selectedNodes={selectedNodes}
               onSummary={s => { addSummaryNode(s); setSelectedIds(new Set()) }}
