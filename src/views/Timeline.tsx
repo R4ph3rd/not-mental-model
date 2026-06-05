@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Briefcase, MessageSquare, BookOpen, Heart, Target, Zap,
-  Bot, Sparkles, KeyRound, Pin,
+  Bot, Sparkles, Lock, Pin,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
@@ -110,7 +110,7 @@ function TimelineItem({ node, selected, onEditRequest, onToggleSelect, onUpdate 
             </span>
           )}
           {node.pinned && <Pin className="h-3 w-3 text-amber-400 shrink-0" fill="currentColor" />}
-          {node.sensitive && <KeyRound className="h-3 w-3 text-orange-400 shrink-0" fill="currentColor" />}
+          {node.sensitive && <Lock className="h-3 w-3 text-orange-400 shrink-0 [&_rect]:fill-current [&_path]:fill-none [&_path]:[stroke-width:2.5]" />}
           {node.provenance === 'agent' && <Bot className={cn('h-3 w-3 shrink-0', isUnconfirmed ? 'text-amber-400' : 'text-blue-400/60')} />}
           {node.provenance === 'extracted' && <Sparkles className="h-3 w-3 text-purple-400/60 shrink-0" />}
           <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
