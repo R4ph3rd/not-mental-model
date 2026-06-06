@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
   Download, FolderInput, Settings, MessageSquare, Telescope, Bot,
-  Network, FolderOpen, AlertTriangle,
+  Network, FolderOpen, Server,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,7 @@ import { SettingsPanel } from '@/components/SettingsPanel'
 import { ChatPanel } from '@/components/ChatPanel'
 import { Onboarding } from '@/components/Onboarding'
 import { InferenceModal } from '@/components/InferenceModal'
+import { McpExportModal } from '@/components/McpExportModal'
 import type { InferenceMode } from '@/components/InferenceModal'
 import { DedupReviewModal } from '@/components/DedupReviewModal'
 import type { ResolvedAction } from '@/components/DedupReviewModal'
@@ -51,12 +52,7 @@ export default function App() {
   const [search, setSearch]                         = useState('')
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [aiOpen, setAiOpen]             = useState(false)
-  const [staleOpen, setStaleOpen]       = useState(false)
-  const [pendingImport, setPendingImport] = useState<{
-    classified: ClassifiedNode[]
-    cleanCount: number
-    onApply: (actions: ResolvedAction[]) => void
-  } | null>(null)
+  const [mcpOpen, setMcpOpen]           = useState(false)
   const [aiTab, setAiTab]               = useState<'extract' | 'summarize'>('extract')
   const [inspectorId, setInspectorId]   = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -130,7 +126,7 @@ export default function App() {
     return true
   }
 
-const filtered = useMemo(() => {
+  const filtered = useMemo(() => {
     let list = nodes
     if (conversationFilter) list = list.filter(n => n.conversationIds.includes(conversationFilter))
     else if (groupFilter) list = list.filter(n => n.projectId === groupFilter || n.groupIds.includes(groupFilter))
@@ -403,6 +399,9 @@ const filtered = useMemo(() => {
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
                 <Download className="h-3.5 w-3.5" />Export
               </Button>
+              <Button size="sm" variant="ghost" onClick={() => setMcpOpen(true)} title="Connect to agents via MCP">
+                <Server className="h-3.5 w-3.5" />Connect
+              </Button>
               <Button size="sm" variant={chatOpen ? 'secondary' : 'outline'}
                 onClick={() => { setChatOpen(v => !v); setSettingsOpen(false) }}>
                 <MessageSquare className="h-3.5 w-3.5" />Chat
@@ -633,17 +632,9 @@ const filtered = useMemo(() => {
           </div>
         </div>
 
-        <Dialog open={!!pendingImport} onOpenChange={open => { if (!open) setPendingImport(null) }}>
-          <DialogContent className="max-w-2xl">
-            {pendingImport && (
-              <DedupReviewModal
-                classified={pendingImport.classified}
-                cleanCount={pendingImport.cleanCount}
-                existingNodes={nodes}
-                onResolve={pendingImport.onApply}
-                onCancel={() => setPendingImport(null)}
-              />
-            )}
+        <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
+          <DialogContent className="max-w-lg">
+            <McpExportModal nodes={nodes} onClose={() => setMcpOpen(false)} />
           </DialogContent>
         </Dialog>
 
