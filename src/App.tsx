@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
   Download, FolderInput, Settings, MessageSquare, Telescope, Bot,
-  Network, FolderOpen,
+  Network, FolderOpen, Server,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,7 @@ import { SettingsPanel } from '@/components/SettingsPanel'
 import { ChatPanel } from '@/components/ChatPanel'
 import { Onboarding } from '@/components/Onboarding'
 import { InferenceModal } from '@/components/InferenceModal'
+import { McpExportModal } from '@/components/McpExportModal'
 import type { InferenceMode } from '@/components/InferenceModal'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
@@ -46,6 +47,7 @@ export default function App() {
   const [search, setSearch]                         = useState('')
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [aiOpen, setAiOpen]             = useState(false)
+  const [mcpOpen, setMcpOpen]           = useState(false)
   const [aiTab, setAiTab]               = useState<'extract' | 'summarize'>('extract')
   const [inspectorId, setInspectorId]   = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -119,7 +121,7 @@ export default function App() {
     return true
   }
 
-const filtered = useMemo(() => {
+  const filtered = useMemo(() => {
     let list = nodes
     if (conversationFilter) list = list.filter(n => n.conversationIds.includes(conversationFilter))
     else if (groupFilter) list = list.filter(n => n.projectId === groupFilter || n.groupIds.includes(groupFilter))
@@ -323,6 +325,9 @@ const filtered = useMemo(() => {
               />
               <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
                 <Download className="h-3.5 w-3.5" />Export
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setMcpOpen(true)} title="Connect to agents via MCP">
+                <Server className="h-3.5 w-3.5" />Connect
               </Button>
               <Button size="sm" variant={chatOpen ? 'secondary' : 'outline'}
                 onClick={() => { setChatOpen(v => !v); setSettingsOpen(false) }}>
@@ -531,6 +536,12 @@ const filtered = useMemo(() => {
             {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
           </div>
         </div>
+
+        <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
+          <DialogContent className="max-w-lg">
+            <McpExportModal nodes={nodes} onClose={() => setMcpOpen(false)} />
+          </DialogContent>
+        </Dialog>
 
 <Dialog open={aiOpen} onOpenChange={setAiOpen}>
           <DialogContent className="max-w-xl">

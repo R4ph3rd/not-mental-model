@@ -83,7 +83,10 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onClose }: Props) {
         // Re-rank: blend mem0 semantic score (60%) with stored importance (40%)
         const ranked = found
           .map(m => {
-            const node = nodes.find(n =>
+            const byId = m.metadata?.nodeId
+              ? nodes.find(n => n.id === (m.metadata!.nodeId as string))
+              : undefined
+            const node = byId ?? nodes.find(n =>
               n.title.toLowerCase().includes(m.memory.slice(0, 20).toLowerCase()) ||
               m.memory.toLowerCase().includes(n.title.toLowerCase())
             )
@@ -123,7 +126,10 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onClose }: Props) {
   // ── Helpers ───────────────────────────────────────────────────────────────
   function matchToNodes(found: Mem0Memory[]): RecalledMemory[] {
     return found.map(m => {
-      const match = nodes.find(n =>
+      const byId = m.metadata?.nodeId
+        ? nodes.find(n => n.id === (m.metadata!.nodeId as string))
+        : undefined
+      const match = byId ?? nodes.find(n =>
         n.title.toLowerCase().includes(m.memory.slice(0, 20).toLowerCase()) ||
         m.memory.toLowerCase().includes(n.title.toLowerCase())
       )
