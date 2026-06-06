@@ -64,6 +64,8 @@ export interface MentalModelNode {
   sensitive: boolean
   // mem0 cloud memory ID — set after successful sync, used for updates/deletes
   mem0Id?: string
+  // Per-node sync status so the UI can surface failures
+  mem0SyncState?: 'pending' | 'synced' | 'error'
   // Bumped whenever this node is surfaced in chat recall — feeds decay recency
   lastAccessedAt?: string
 }

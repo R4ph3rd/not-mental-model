@@ -385,21 +385,20 @@ export function useMentalModelStore() {
       conversationIds: conversationIds ?? [],
     }
     mutateNodes(prev => [node, ...prev])
-    // Fire-and-forget mem0 sync — respects all eligibility gates
     if (shouldSyncToMem0(node)) {
+      mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0SyncState: 'pending' } : n))
       void (async () => {
         const cfg = getMem0Config()
         if (!cfg) return
         try {
-          const mem0Id = await mem0AddMemory(
-            cfg.apiKey, cfg.userId,
-            nodeToMem0Text(node),
-            nodeToMem0Metadata(node),
-          )
-          if (mem0Id) {
-            mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0Id } : n))
-          }
-        } catch { /* non-fatal — local store is source of truth */ }
+          const mem0Id = await mem0AddMemory(cfg.apiKey, cfg.userId, nodeToMem0Text(node), nodeToMem0Metadata(node))
+          mutateNodes(prev => prev.map(n => n.id === node.id
+            ? { ...n, mem0Id: mem0Id ?? n.mem0Id, mem0SyncState: mem0Id ? 'synced' : 'error' }
+            : n,
+          ))
+        } catch {
+          mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0SyncState: 'error' } : n))
+        }
       })()
     }
     return node
@@ -429,12 +428,16 @@ export function useMentalModelStore() {
       const node = nodesRef.current.find(n => n.id === id)
       if (node?.mem0Id && shouldSyncToMem0({ ...node, ...data })) {
         const updated = { ...node, ...data }
+        mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0SyncState: 'pending' } : n))
         void (async () => {
           const cfg = getMem0Config()
           if (!cfg) return
           try {
             await mem0Update(cfg.apiKey, node.mem0Id!, nodeToMem0Text(updated as MentalModelNode))
-          } catch { /* non-fatal */ }
+            mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0SyncState: 'synced' } : n))
+          } catch {
+            mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0SyncState: 'error' } : n))
+          }
         })()
       }
     }
@@ -493,10 +496,16 @@ export function useMentalModelStore() {
       if (!shouldSyncToMem0(confirmed)) return
       const cfg = getMem0Config()
       if (!cfg) return
+      mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0SyncState: 'pending' } : n))
       try {
         const mem0Id = await mem0AddMemory(cfg.apiKey, cfg.userId, nodeToMem0Text(confirmed), nodeToMem0Metadata(confirmed))
-        if (mem0Id) mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0Id } : n))
-      } catch { /* non-fatal */ }
+        mutateNodes(prev => prev.map(n => n.id === id
+          ? { ...n, mem0Id: mem0Id ?? n.mem0Id, mem0SyncState: mem0Id ? 'synced' : 'error' }
+          : n,
+        ))
+      } catch {
+        mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0SyncState: 'error' } : n))
+      }
     })()
   }, [mutateNodes])
 
@@ -545,15 +554,19 @@ export function useMentalModelStore() {
       projectId: undefined, conversationIds: [],
       groupIds: [], provenance: 'extracted', confirmed: true, sensitive: false,
     }
-    mutateNodes(prev => [node, ...prev])
-    // Summary nodes are high-importance agent-extracted facts — push to mem0
+    mutateNodes(prev => [{ ...node, mem0SyncState: 'pending' }, ...prev])
     void (async () => {
       const cfg = getMem0Config()
       if (!cfg) return
       try {
         const mem0Id = await mem0AddMemory(cfg.apiKey, cfg.userId, nodeToMem0Text(node), nodeToMem0Metadata(node))
-        if (mem0Id) mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0Id } : n))
-      } catch { /* non-fatal */ }
+        mutateNodes(prev => prev.map(n => n.id === node.id
+          ? { ...n, mem0Id: mem0Id ?? n.mem0Id, mem0SyncState: mem0Id ? 'synced' : 'error' }
+          : n,
+        ))
+      } catch {
+        mutateNodes(prev => prev.map(n => n.id === node.id ? { ...n, mem0SyncState: 'error' } : n))
+      }
     })()
     return node
   }, [mutateNodes])

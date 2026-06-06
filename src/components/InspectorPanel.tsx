@@ -528,6 +528,20 @@ export function InspectorPanel({ node, conversations, allNodes, onClose, onUpdat
             </Button>
           </div>
 
+          {n.mem0SyncState && (
+            <span
+              title={n.mem0SyncState === 'synced' ? 'Synced to mem0' : n.mem0SyncState === 'pending' ? 'Syncing to mem0…' : 'mem0 sync failed'}
+              className={cn(
+                'text-[10px] px-1.5 py-0.5 rounded border font-medium',
+                n.mem0SyncState === 'synced'  && 'text-green-400  border-green-500/30  bg-green-500/10',
+                n.mem0SyncState === 'pending' && 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
+                n.mem0SyncState === 'error'   && 'text-red-400    border-red-500/30    bg-red-500/10',
+              )}
+            >
+              {n.mem0SyncState === 'synced' ? 'mem0 ✓' : n.mem0SyncState === 'pending' ? 'mem0 …' : 'mem0 ✗'}
+            </span>
+          )}
+
           <div className="flex-1" />
 
           <button
