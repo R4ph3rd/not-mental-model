@@ -39,22 +39,19 @@ function buildText(nodes: MentalModelNode[], label: string | null, includeInstru
 }
 
 export function CopyContextButton({
-  allNodes, filteredNodes, isVisible,
+  filteredNodes, isVisible,
   groupLabel, conversationLabel, categoryFilter, hasSearch,
 }: Props) {
-  const [open, setOpen]         = useState(false)
-  const [scope, setScope]       = useState<'view' | 'all'>('view')
+  const [open, setOpen]               = useState(false)
   const [instruction, setInstruction] = useState(false)
-  const [copied, setCopied]     = useState(false)
+  const [copied, setCopied]           = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const hasFilter = !!(groupLabel || conversationLabel || categoryFilter !== 'all' || hasSearch)
-
   const viewNodes = filteredNodes.filter(isVisible)
-  const allActive = allNodes.filter(isVisible)
+  const viewCount = viewNodes.length
 
-  // Default to 'all' when no filter is active (same result either way)
-  useEffect(() => { if (!hasFilter) setScope('all') }, [hasFilter])
+  const contextLabel = conversationLabel ?? groupLabel ?? (categoryFilter !== 'all' ? categoryFilter : null)
 
   useEffect(() => {
     if (!open) return
@@ -66,78 +63,43 @@ export function CopyContextButton({
   }, [open])
 
   function doCopy() {
-    const nodes = scope === 'view' ? viewNodes : allActive
-    if (nodes.length === 0) return
-    const label = scope === 'view'
-      ? (conversationLabel ?? groupLabel ?? (categoryFilter !== 'all' ? categoryFilter : null))
-      : null
-    navigator.clipboard.writeText(buildText(nodes, label, instruction))
+    if (viewNodes.length === 0) return
+    navigator.clipboard.writeText(buildText(viewNodes, contextLabel, instruction))
     setCopied(true)
     setOpen(false)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // When no filter is active: skip popover, copy directly with a single click
+  // Skip popover when no instruction opt-in is needed (no filter = no ambiguity)
   function handleClick() {
-    if (!hasFilter) { doCopy(); return }
+    if (!hasFilter && !instruction) { doCopy(); return }
     setOpen(v => !v)
   }
-
-  const viewCount = viewNodes.length
-  const allCount  = allActive.length
 
   return (
     <div ref={ref} className="relative">
       <Button
         size="sm" variant="ghost"
         onClick={handleClick}
-        title={
-          hasFilter
-            ? `Copy context — ${viewCount} node${viewCount !== 1 ? 's' : ''} in current view`
-            : `Copy all context (${allCount} nodes) — paste into any AI chat`
-        }
+        title={`Copy context — ${viewCount} node${viewCount !== 1 ? 's' : ''} visible in current view`}
       >
         {copied
           ? <ClipboardCheck className="h-3.5 w-3.5 text-green-400" />
           : <Clipboard className="h-3.5 w-3.5" />}
-        {hasFilter && !copied && (
+        {!copied && (
           <span className="text-[10px] tabular-nums opacity-60">{viewCount}</span>
         )}
       </Button>
 
       {open && (
         <div className={cn(
-          'absolute right-0 top-full mt-1 z-50 w-64 rounded-xl border t-border shadow-xl py-3 px-3 space-y-3',
+          'absolute right-0 top-full mt-1 z-50 w-60 rounded-xl border t-border shadow-xl py-3 px-3 space-y-3',
           'bg-[color:rgb(var(--bg-card))]',
         )}>
           <p className="text-xs font-semibold t-text">Copy context</p>
 
-          {/* Scope toggle */}
-          <div className="flex rounded-lg overflow-hidden border t-border text-[11px]">
-            <button
-              className={cn(
-                'flex-1 px-2 py-1.5 transition-colors text-center',
-                scope === 'view' ? 't-accent-subtle t-accent font-medium' : 't-muted hover:t-text',
-              )}
-              onClick={() => setScope('view')}
-            >
-              Current view
-              <span className="ml-1 opacity-60">({viewCount})</span>
-            </button>
-            <button
-              className={cn(
-                'flex-1 px-2 py-1.5 border-l t-border transition-colors text-center',
-                scope === 'all' ? 't-accent-subtle t-accent font-medium' : 't-muted hover:t-text',
-              )}
-              onClick={() => setScope('all')}
-            >
-              All active
-              <span className="ml-1 opacity-60">({allCount})</span>
-            </button>
-          </div>
-
-          {/* Scope label hint */}
-          {scope === 'view' && hasFilter && (
+          {/* Active filter hint */}
+          {hasFilter && (
             <p className="text-[10px] t-muted leading-snug">
               {[
                 conversationLabel && `conversation: ${conversationLabel}`,
@@ -164,8 +126,8 @@ export function CopyContextButton({
             </span>
           </label>
 
-          <Button size="sm" className="w-full" onClick={doCopy} disabled={viewCount === 0 && scope === 'view'}>
-            Copy {scope === 'view' ? viewCount : allCount} nodes
+          <Button size="sm" className="w-full" onClick={doCopy} disabled={viewCount === 0}>
+            Copy {viewCount} node{viewCount !== 1 ? 's' : ''}
           </Button>
         </div>
       )}
