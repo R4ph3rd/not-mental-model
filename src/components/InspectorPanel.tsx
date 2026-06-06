@@ -1,21 +1,27 @@
-import { useState, useRef, useEffect } from 'react'
-import { X, MessageSquare, Plus, Trash2, Pin, Lock, Unlock, Eye, EyeOff, Bot, Check } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { X, MessageSquare, Plus, Trash2, Pin, Lock, Unlock, Eye, EyeOff, Bot, Check, ZoomIn, GitMerge, Loader2, AlertTriangle, ArrowLeftRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PillSelect, TagInput } from '@/components/NodeForm'
 import { CATEGORY_LABELS } from '@/types/mental-model'
 import type { MentalModelNode, NodeCategory, ConfidenceLevel, MemoryType, Conversation } from '@/types/mental-model'
 import type { NodeFormData } from '@/store/mental-model-store'
+import { findMatches, mergeNodes } from '@/lib/dedup'
+import type { DedupMatch } from '@/lib/dedup'
+import { getDefaultProvider } from '@/lib/providers'
 import { cn } from '@/lib/utils'
 
 interface Props {
   node: MentalModelNode | null
   conversations: Conversation[]
+  allNodes?: MentalModelNode[]
   onClose: () => void
   onUpdate: (id: string, data: Partial<NodeFormData> & { conversationIds?: string[] }) => void
   onDelete: (id: string) => void
+  onDeleteOther?: (id: string) => void
   onToggleActive?: (id: string) => void
   onTogglePin?: (id: string) => void
   onConfirm?: (id: string) => void
+  onNavigateTo?: (id: string) => void
 }
 
 // ─── Category color maps ────────────────────────────────────────────────────
@@ -83,18 +89,46 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelete, onToggleActive, onTogglePin, onConfirm }: Props) {
+export function InspectorPanel({ node, conversations, allNodes, onClose, onUpdate, onDelete, onDeleteOther, onToggleActive, onTogglePin, onConfirm, onNavigateTo }: Props) {
   const [showConvPicker, setShowConvPicker] = useState(false)
   const [editingTitle, setEditingTitle]     = useState(false)
   const [titleDraft, setTitleDraft]         = useState('')
   const [liveImportance, setLiveImportance] = useState<number | null>(null)
+  const [dedupHint, setDedupHint]           = useState<DedupMatch | null>(null)
+  const [dedupDismissed, setDedupDismissed] = useState(false)
+  const [expandedDiff, setExpandedDiff]     = useState<string | null>(null)
+  const [mergeStates, setMergeStates]       = useState<Record<string, { loading: boolean; result?: { title: string; content: string } }>>({})
   const titleRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (editingTitle) titleRef.current?.select() }, [editingTitle])
-  useEffect(() => { setEditingTitle(false); setShowConvPicker(false); setLiveImportance(null) }, [node?.id])
+  useEffect(() => {
+    setEditingTitle(false); setShowConvPicker(false); setLiveImportance(null)
+    setDedupHint(null); setDedupDismissed(false); setExpandedDiff(null); setMergeStates({})
+  }, [node?.id])
+
+  // Live dedup hint while typing the title
+  useEffect(() => {
+    if (!editingTitle || !allNodes || !titleDraft.trim()) { setDedupHint(null); return }
+    const nodeId       = node?.id
+    const nodeCategory = node?.category ?? 'fact'
+    const timer = setTimeout(() => {
+      const matches = findMatches(
+        { title: titleDraft, content: '', category: nodeCategory },
+        allNodes.filter(x => x.id !== nodeId),
+      )
+      setDedupHint(matches[0] ?? null)
+      if (matches[0]) setDedupDismissed(false)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [titleDraft, editingTitle, allNodes, node?.id, node?.category])
 
   if (!node) return null
   const n = node
+
+  const similarMatches = useMemo(() => {
+    if (!allNodes || !n.title.trim()) return []
+    return findMatches({ title: n.title, content: n.content, category: n.category }, allNodes.filter(x => x.id !== n.id))
+  }, [n.title, n.content, n.category, allNodes, n.id])
 
   function upd<K extends keyof NodeFormData>(key: K, value: NodeFormData[K]) {
     onUpdate(n.id, { [key]: value } as Partial<NodeFormData>)
@@ -103,6 +137,28 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
   function commitTitle() {
     if (titleDraft.trim() && titleDraft.trim() !== n.title) upd('title', titleDraft.trim())
     setEditingTitle(false)
+    setDedupHint(null)
+    setDedupDismissed(false)
+  }
+
+  async function handleMergeWith(matchId: string, match: DedupMatch) {
+    setMergeStates(prev => ({ ...prev, [matchId]: { loading: true } }))
+    const provider = getDefaultProvider()
+    if (!provider) { setMergeStates(prev => ({ ...prev, [matchId]: { loading: false } })); return }
+    const merged = await mergeNodes(
+      { title: n.title, content: n.content },
+      { title: match.existing.title, content: match.existing.content },
+      provider,
+    )
+    setMergeStates(prev => ({ ...prev, [matchId]: { loading: false, result: merged ?? undefined } }))
+  }
+
+  function applyMerge(matchId: string, match: DedupMatch) {
+    const s = mergeStates[matchId]
+    if (!s?.result) return
+    onUpdate(n.id, { title: s.result.title, content: s.result.content })
+    onDeleteOther?.(match.existing.id)
+    setMergeStates(prev => { const next = { ...prev }; delete next[matchId]; return next })
   }
 
   const nodeConvs      = conversations.filter(c => (n.conversationIds ?? []).includes(c.id))
@@ -134,17 +190,21 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
             onBlur={commitTitle}
             onKeyDown={e => {
               if (e.key === 'Enter') { e.preventDefault(); commitTitle() }
-              if (e.key === 'Escape') setEditingTitle(false)
+              if (e.key === 'Escape') { setEditingTitle(false); setDedupHint(null) }
             }}
             className="flex-1 text-sm font-medium t-text bg-transparent border-b border-white/25 outline-none mt-0.5"
           />
         ) : (
           <span
-            className="flex-1 text-sm font-medium t-text break-words cursor-text select-none mt-0.5"
+            className={cn(
+              'flex-1 text-sm font-medium break-words mt-0.5',
+              n.title ? 'cursor-text select-none t-text' : 'cursor-pointer italic opacity-40 select-none t-muted',
+            )}
+            onClick={n.title ? undefined : () => { setTitleDraft(''); setEditingTitle(true) }}
             onDoubleClick={() => { setTitleDraft(n.title); setEditingTitle(true) }}
-            title="Double-click to rename"
+            title={n.title ? 'Double-click to rename' : 'Click to add title'}
           >
-            {n.title}
+            {n.title || '(untitled — click to edit)'}
           </span>
         )}
 
@@ -152,6 +212,30 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* ── Live dedup hint (shown while editing title) ── */}
+      {dedupHint && !dedupDismissed && editingTitle && (
+        <div className="mx-3 mt-2 rounded-lg bg-yellow-500/10 border border-yellow-500/25 px-3 py-2">
+          <p className="text-[11px] text-yellow-300/90 leading-snug">
+            Similar to <span className="font-medium">"{dedupHint.existing.title}"</span>
+            <span className="opacity-60"> · {Math.round(dedupHint.similarity * 100)}% match</span>
+          </p>
+          <div className="flex gap-3 mt-1.5">
+            <button
+              onClick={() => { onNavigateTo?.(dedupHint.existing.id); setDedupHint(null) }}
+              className="text-[10px] text-yellow-300 hover:text-yellow-200 underline underline-offset-2 transition-colors"
+            >
+              Show me
+            </button>
+            <button
+              onClick={() => setDedupDismissed(true)}
+              className="text-[10px] t-muted hover:t-text underline underline-offset-2 transition-colors"
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Scrollable body ── */}
       <div className="flex-1 overflow-y-auto">
@@ -304,11 +388,122 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           </>
         )}
 
+        {/* Similar nodes */}
+        {similarMatches.length > 0 && (
+          <>
+            <Divider />
+            <div className="px-4 py-3 space-y-2">
+              <FieldLabel className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3 w-3 inline-block text-yellow-400/80" />
+                Similar nodes
+              </FieldLabel>
+              {similarMatches.map(match => {
+                const ms      = mergeStates[match.existing.id]
+                const showDiff = expandedDiff === match.existing.id
+                return (
+                  <div key={match.existing.id} className="rounded-lg border t-border bg-white/[0.02] overflow-hidden">
+
+                    {/* Match header row */}
+                    <div className="flex items-start gap-2 px-2.5 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] t-muted leading-snug mb-0.5">
+                          {match.kind === 'duplicate' ? 'Likely duplicate' : 'Possible conflict'}
+                          <span className="opacity-60"> · {Math.round(match.similarity * 100)}%</span>
+                        </p>
+                        <p className="text-xs font-medium t-text truncate">{match.existing.title}</p>
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                        <button
+                          onClick={() => onNavigateTo?.(match.existing.id)}
+                          title="Zoom to node"
+                          className="p-1 rounded t-muted hover:t-text hover:bg-white/[0.06] transition-colors"
+                        >
+                          <ZoomIn className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => handleMergeWith(match.existing.id, match)}
+                          disabled={ms?.loading}
+                          title="Merge with AI"
+                          className="p-1 rounded t-muted hover:text-blue-300 hover:bg-blue-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {ms?.loading
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <GitMerge className="h-3 w-3" />}
+                        </button>
+                        <button
+                          onClick={() => setExpandedDiff(showDiff ? null : match.existing.id)}
+                          title="Compare content"
+                          className={cn(
+                            'p-1 rounded transition-colors',
+                            showDiff ? 'text-blue-300 bg-blue-500/10' : 't-muted hover:text-blue-300 hover:bg-blue-500/10',
+                          )}
+                        >
+                          <ArrowLeftRight className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteOther?.(match.existing.id)}
+                          title="Delete other node"
+                          className="p-1 rounded t-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Merge result preview */}
+                    {ms?.result && (
+                      <div className="px-2.5 pb-2.5 border-t t-border">
+                        <p className="text-[10px] text-blue-400 font-medium pt-2 mb-1">Merged result</p>
+                        <p className="text-xs font-medium t-text">{ms.result.title}</p>
+                        <p className="text-[11px] t-muted mt-0.5 leading-snug">{ms.result.content}</p>
+                        <div className="flex gap-3 mt-2">
+                          <button
+                            onClick={() => applyMerge(match.existing.id, match)}
+                            className="text-[10px] text-green-400 hover:text-green-300 transition-colors"
+                          >
+                            Apply merge
+                          </button>
+                          <button
+                            onClick={() => setMergeStates(p => { const next = { ...p }; delete next[match.existing.id]; return next })}
+                            className="text-[10px] t-muted hover:t-text transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Side-by-side diff */}
+                    {showDiff && (
+                      <div className="px-2.5 pb-2.5 border-t t-border">
+                        <div className="grid grid-cols-2 gap-2 pt-2">
+                          <div>
+                            <p className="text-[9px] t-muted uppercase tracking-wider mb-1">This node</p>
+                            <p className="text-[11px] t-text leading-snug line-clamp-5">
+                              {n.content || <em className="opacity-40">empty</em>}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] t-muted uppercase tracking-wider mb-1">Other</p>
+                            <p className="text-[11px] t-text leading-snug line-clamp-5">
+                              {match.existing.content || <em className="opacity-40">empty</em>}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
         <Divider />
 
         {/* Actions row */}
         <div className="px-4 py-4 flex items-center gap-2">
-          {/* Pin / active / sensitive toggles */}
           <div className="flex items-center gap-1">
             <Button size="icon" variant="ghost"
               className={cn('h-7 w-7', n.pinned ? 'text-amber-300' : 't-muted hover:t-text')}

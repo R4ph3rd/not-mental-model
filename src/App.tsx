@@ -142,7 +142,7 @@ export default function App() {
     return list
   }, [nodes, categoryFilter, conversationFilter, groupFilter, search])
 
-  const activeCount   = useMemo(() => nodes.filter(isNodeVisibleToAgent).length, [nodes, inactiveGroupIds])
+  const activeCount   = useMemo(() => filtered.filter(isNodeVisibleToAgent).length, [filtered, inactiveGroupIds])
   const nStale        = useMemo(() => staleCount(nodes), [nodes])
 
   type GridSection = { id: string; name: string; color: string; items: MentalModelNode[] }
@@ -598,12 +598,15 @@ export default function App() {
               <InspectorPanel
                 node={inspectedNode}
                 conversations={conversations}
+                allNodes={nodes}
                 onClose={() => setInspectorId(null)}
                 onUpdate={updateNode}
                 onDelete={id => { deleteNode(id); setInspectorId(null) }}
+                onDeleteOther={deleteNode}
                 onToggleActive={toggleActive}
                 onTogglePin={togglePin}
                 onConfirm={confirmNode}
+                onNavigateTo={id => { handleFocusNode(id); setInspectorId(id) }}
               />
             )}
 
