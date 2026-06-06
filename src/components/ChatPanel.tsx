@@ -57,7 +57,11 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
   const [primingState, setPrimingState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
   const bottomRef = useRef<HTMLDivElement>(null)
-  const mem0 = getMem0Config()
+  // Refs so primeContext always sees the latest nodes/groups without needing them as deps
+  const nodesRef  = useRef(nodes)
+  nodesRef.current  = nodes
+  const groupsRef = useRef(groups)
+  groupsRef.current = groups
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -65,6 +69,7 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
 
   // ── Prime context when discussion opens ──────────────────────────────────
   const primeContext = useCallback(async () => {
+    const mem0 = getMem0Config()
     setPrimingState('loading')
     try {
       let primed: RecalledMemory[] = []
@@ -80,9 +85,9 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
         const ranked = found
           .map(m => {
             const byId = m.metadata?.nodeId
-              ? nodes.find(n => n.id === (m.metadata!.nodeId as string))
+              ? nodesRef.current.find(n => n.id === (m.metadata!.nodeId as string))
               : undefined
-            const node = byId ?? nodes.find(n =>
+            const node = byId ?? nodesRef.current.find(n =>
               n.title.toLowerCase().includes(m.memory.slice(0, 20).toLowerCase()) ||
               m.memory.toLowerCase().includes(n.title.toLowerCase())
             )
@@ -101,8 +106,8 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
         }))
       } else {
         // Fallback: top active non-sensitive nodes ranked by decay × 0.5 + importance × 0.5
-        const inactiveGroups = new Set(groups.filter(g => !g.active).map(g => g.id))
-        primed = nodes
+        const inactiveGroups = new Set(groupsRef.current.filter(g => !g.active).map(g => g.id))
+        primed = nodesRef.current
           .filter(n => n.active && !n.sensitive && !n.groupIds.some(gid => inactiveGroups.has(gid)))
           .map(n => ({ n, rank: computeDecayScore(n) * 0.5 + n.importance * 0.5 }))
           .sort((a, b) => b.rank - a.rank)
@@ -115,7 +120,7 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
     } catch {
       setPrimingState('error')
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     void primeContext()
