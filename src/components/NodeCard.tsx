@@ -56,11 +56,6 @@ function InlineText({ value, onSave, tag = 'p', className }: {
     setDraft(value); setEditing(true)
     setTimeout(() => ref.current?.focus(), 0)
   }
-  // Single-click on text: stop propagation so the card's onClick (open inspector) doesn't fire.
-  // Ctrl/Cmd+click still propagates so multi-select works.
-  function handleClick(e: React.MouseEvent) {
-    if (!e.ctrlKey && !e.metaKey) e.stopPropagation()
-  }
   function save() { setEditing(false); if (draft.trim() !== value) onSave(draft.trim()) }
   function onKey(e: React.KeyboardEvent) {
     if (e.key === 'Escape') { setEditing(false); setDraft(value) }

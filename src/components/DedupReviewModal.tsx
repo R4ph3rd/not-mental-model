@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils'
 interface Props {
   classified: ClassifiedNode[]
   cleanCount: number
-  existingNodes: MentalModelNode[]
   onResolve: (actions: ResolvedAction[]) => void
   onCancel: () => void
 }
@@ -30,7 +29,7 @@ interface ItemState {
   isConflict?: boolean
 }
 
-export function DedupReviewModal({ classified, cleanCount, existingNodes, onResolve, onCancel }: Props) {
+export function DedupReviewModal({ classified, cleanCount, onResolve, onCancel }: Props) {
   const [states, setStates] = useState<ItemState[]>(() => classified.map(() => ({ action: null })))
   const [provider] = useState(getDefaultProvider)
 

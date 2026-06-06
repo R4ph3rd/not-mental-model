@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
   Download, FolderInput, Settings, MessageSquare, Telescope, Bot,
-  Network, FolderOpen, Server,
+  Network, FolderOpen, Server, AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,7 @@ import type { InferenceMode } from '@/components/InferenceModal'
 import { DedupReviewModal } from '@/components/DedupReviewModal'
 import type { ResolvedAction } from '@/components/DedupReviewModal'
 import { classifyIncoming } from '@/lib/dedup'
-import type { ClassifiedNode } from '@/lib/dedup'
+import type { ClassifiedNode, PendingNode } from '@/lib/dedup'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import type { NodeCategory, MentalModelNode } from '@/types/mental-model'
@@ -52,7 +52,13 @@ export default function App() {
   const [search, setSearch]                         = useState('')
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [aiOpen, setAiOpen]             = useState(false)
+  const [staleOpen, setStaleOpen]       = useState(false)
   const [mcpOpen, setMcpOpen]           = useState(false)
+  const [pendingImport, setPendingImport] = useState<{
+    classified: ClassifiedNode[]
+    cleanCount: number
+    onApply: (actions: ResolvedAction[]) => void
+  } | null>(null)
   const [aiTab, setAiTab]               = useState<'extract' | 'summarize'>('extract')
   const [inspectorId, setInspectorId]   = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -252,8 +258,8 @@ export default function App() {
   }
 
   function handleImportWithDedup(incoming: import('@/types/mental-model').MentalModelNode[]) {
-    const { needsReview, clean } = classifyIncoming(incoming, nodes)
-    importNodes(clean as import('@/types/mental-model').MentalModelNode[])
+    const { needsReview, clean } = classifyIncoming(incoming as unknown as PendingNode[], nodes)
+    importNodes(clean as unknown as import('@/types/mental-model').MentalModelNode[])
     if (needsReview.length > 0) {
       setPendingImport({
         classified: needsReview,
@@ -641,7 +647,20 @@ export default function App() {
           </DialogContent>
         </Dialog>
 
-<Dialog open={aiOpen} onOpenChange={setAiOpen}>
+        <Dialog open={!!pendingImport} onOpenChange={open => { if (!open) setPendingImport(null) }}>
+          <DialogContent className="max-w-2xl">
+            {pendingImport && (
+              <DedupReviewModal
+                classified={pendingImport.classified}
+                cleanCount={pendingImport.cleanCount}
+                onResolve={pendingImport.onApply}
+                onCancel={() => setPendingImport(null)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={aiOpen} onOpenChange={setAiOpen}>
           <DialogContent className="max-w-xl">
             <ClaudeSync
               onImport={handleImportWithDedup}
