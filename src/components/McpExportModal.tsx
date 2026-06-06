@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Download, Clipboard, ClipboardCheck, Server, ExternalLink, Terminal } from 'lucide-react'
+import { X, Download, Clipboard, ClipboardCheck, Server, ExternalLink, Terminal, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import type { MentalModelNode } from '@/types/mental-model'
@@ -9,6 +9,8 @@ interface Props {
   nodes: MentalModelNode[]
   onClose: () => void
 }
+
+type Tab = 'claude' | 'gpt'
 
 function useClipboard(ms = 2000) {
   const [copied, setCopied] = useState(false)
@@ -21,7 +23,9 @@ function useClipboard(ms = 2000) {
 }
 
 export function McpExportModal({ nodes, onClose }: Props) {
-  const { copied: configCopied, copy: copyConfig } = useClipboard()
+  const [tab, setTab]                           = useState<Tab>('claude')
+  const { copied: configCopied,  copy: copyConfig  } = useClipboard()
+  const { copied: pythonCopied,  copy: copyPython  } = useClipboard()
   const snapshotActive = nodes.filter(n => n.active !== false && !n.sensitive)
 
   function downloadSnapshot() {
@@ -39,109 +43,181 @@ export function McpExportModal({ nodes, onClose }: Props) {
     a.click()
   }
 
-  function buildMcpConfig(serverPath: string, snapshotPath: string) {
-    return JSON.stringify(
-      {
-        mcpServers: {
-          'mental-model': {
-            command: 'node',
-            args: [serverPath, snapshotPath],
-          },
-        },
+  const mcpConfig = JSON.stringify({
+    mcpServers: {
+      'mental-model': {
+        command: 'node',
+        args: ['/abs/path/mental-model-mcp.js', '/abs/path/snapshot.json'],
       },
-      null,
-      2,
-    )
-  }
+    },
+  }, null, 2)
 
-  function handleCopyConfig() {
-    const cfg = buildMcpConfig(
-      '/path/to/mental-model-mcp.js',
-      '/path/to/mental-model-snapshot.json',
-    )
-    copyConfig(cfg)
-  }
+  const pythonSnippet = `import requests, json
+
+BASE = "http://localhost:3456"
+
+# Search your graph
+results = requests.post(f"{BASE}/search", json={"query": "coffee preferences"}).json()
+
+# Get full context block
+ctx = requests.post(f"{BASE}/context", json={"scope": "Work"}).json()["context"]
+
+# Add a memory from the agent
+requests.post(f"{BASE}/add", json={
+    "title": "Prefers async communication",
+    "content": "Avoids synchronous meetings when possible.",
+    "category": "preference",
+})
+
+# Get OpenAI function definitions (paste into your assistant)
+fns = requests.get(f"{BASE}/openai-functions").json()`
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 t-text">
           <Server className="h-4 w-4 t-accent" />
           Connect to agents
         </DialogTitle>
         <DialogDescription className="t-muted">
-          Expose your knowledge graph as an MCP server so any agent can query it directly.
+          Expose your knowledge graph to Claude Desktop (MCP) or any GPT/API agent (HTTP).
         </DialogDescription>
       </DialogHeader>
 
-      {/* How it works */}
-      <div className="rounded-lg border t-border bg-white/[0.03] px-4 py-3 space-y-1">
-        <p className="text-xs font-semibold t-text mb-2">How it works</p>
-        <Step n={1} text="Download the MCP server script and your snapshot below." />
-        <Step n={2} text='Put both files somewhere permanent (e.g. ~/mental-model/).' />
-        <Step n={3} text="Copy the MCP config and add it to your agent config file." />
-        <Step n={4} text="Re-export the snapshot whenever your graph changes." />
+      {/* Tab switcher */}
+      <div className="flex gap-1 rounded-lg border t-border p-0.5 bg-white/[0.03]">
+        <TabBtn active={tab === 'claude'} onClick={() => setTab('claude')} icon={<Server className="h-3 w-3" />} label="Claude Desktop (MCP)" />
+        <TabBtn active={tab === 'gpt'}    onClick={() => setTab('gpt')}    icon={<Bot   className="h-3 w-3" />} label="GPT / OpenAI / HTTP" />
       </div>
 
-      {/* Step 1 — download */}
-      <section className="space-y-2">
-        <p className="text-xs font-semibold t-muted uppercase tracking-wider">1 · Download files</p>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={downloadServer} className="flex-1">
-            <Terminal className="h-3.5 w-3.5" />mental-model-mcp.js
-            <Download className="h-3 w-3 ml-auto opacity-60" />
-          </Button>
-          <Button size="sm" variant="outline" onClick={downloadSnapshot} className="flex-1">
-            <Download className="h-3.5 w-3.5" />snapshot.json
-            <span className="ml-auto text-[10px] opacity-50">{snapshotActive.length} nodes</span>
-          </Button>
+      {/* ── Claude / MCP tab ─────────────────────────────────────────────── */}
+      {tab === 'claude' && (
+        <div className="space-y-4">
+          <div className="rounded-lg border t-border bg-white/[0.03] px-3 py-2.5 space-y-1">
+            <Step n={1} text="Download the server script and your snapshot." />
+            <Step n={2} text="Put both files in a permanent location (e.g. ~/mental-model/)." />
+            <Step n={3} text="Add the config block below to claude_desktop_config.json — update the two paths." />
+            <Step n={4} text="Restart Claude Desktop. The three tools appear automatically." />
+            <Step n={5} text="Re-export snapshot here whenever your graph changes." />
+          </div>
+
+          <section className="space-y-2">
+            <p className="text-xs font-semibold t-muted uppercase tracking-wider">1 · Download</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={downloadServer} className="flex-1">
+                <Terminal className="h-3.5 w-3.5" />mental-model-mcp.js
+                <Download className="h-3 w-3 ml-auto opacity-60" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={downloadSnapshot} className="flex-1">
+                <Download className="h-3.5 w-3.5" />snapshot.json
+                <span className="ml-auto text-[10px] opacity-50">{snapshotActive.length} nodes</span>
+              </Button>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <p className="text-xs font-semibold t-muted uppercase tracking-wider">2 · MCP config</p>
+            <div className="relative">
+              <pre className="text-[10px] font-mono rounded-lg border t-border bg-black/30 px-3 py-2.5 overflow-x-auto t-muted leading-relaxed">{mcpConfig}</pre>
+              <button
+                onClick={() => copyConfig(mcpConfig)}
+                className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded border t-border bg-black/40 hover:bg-white/10 transition-colors"
+              >
+                {configCopied
+                  ? <ClipboardCheck className="h-3 w-3 text-green-400" />
+                  : <Clipboard className="h-3 w-3 t-muted" />}
+              </button>
+            </div>
+          </section>
+
+          <section className="space-y-1.5">
+            <p className="text-xs font-semibold t-muted uppercase tracking-wider">Tools available to Claude</p>
+            <ToolRow name="memory_search"      sig="query, limit?, category?"   desc="Search your graph" />
+            <ToolRow name="memory_get_context" sig="scope?, category?, limit?"  desc="Full context block" />
+            <ToolRow name="memory_add"         sig="title, content, category?"  desc="Write a node back (confirmed on import)" />
+          </section>
+
+          <div className="flex items-center justify-between pt-1">
+            <a href="https://modelcontextprotocol.io/docs/concepts/servers" target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-1 text-[11px] t-muted hover:t-text transition-colors">
+              <ExternalLink className="h-3 w-3" />MCP docs
+            </a>
+            <Button size="sm" variant="ghost" onClick={onClose}><X className="h-3.5 w-3.5" />Close</Button>
+          </div>
         </div>
-      </section>
+      )}
 
-      {/* Step 2 — MCP config */}
-      <section className="space-y-2">
-        <p className="text-xs font-semibold t-muted uppercase tracking-wider">2 · Add to agent config</p>
-        <p className="text-[11px] t-muted">
-          Paste this into <code className="text-[10px] bg-white/8 px-1 py-0.5 rounded">claude_desktop_config.json</code>,
-          {' '}<code className="text-[10px] bg-white/8 px-1 py-0.5 rounded">.mcp.json</code>,
-          {' '}or your agent's MCP settings — then update the two paths.
-        </p>
-        <div className="relative">
-          <pre className={cn(
-            'text-[10px] font-mono rounded-lg border t-border bg-black/30 px-3 py-2.5 overflow-x-auto t-muted leading-relaxed',
-          )}>{buildMcpConfig('/path/to/mental-model-mcp.js', '/path/to/mental-model-snapshot.json')}</pre>
-          <button
-            onClick={handleCopyConfig}
-            className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded border t-border bg-black/40 hover:bg-white/10 transition-colors"
-          >
-            {configCopied
-              ? <ClipboardCheck className="h-3 w-3 text-green-400" />
-              : <Clipboard className="h-3 w-3 t-muted" />}
-          </button>
+      {/* ── GPT / HTTP tab ───────────────────────────────────────────────── */}
+      {tab === 'gpt' && (
+        <div className="space-y-4">
+          <div className="rounded-lg border t-border bg-white/[0.03] px-3 py-2.5 space-y-1">
+            <Step n={1} text="Download the server and snapshot." />
+            <Step n={2} text='Start the HTTP server: node mental-model-mcp.js snapshot.json --http' />
+            <Step n={3} text="Call the REST endpoints from your code, or fetch /openai-functions for function definitions." />
+            <Step n={4} text="Agent-added nodes (/add) are written to the snapshot — re-import to review them in the app." />
+          </div>
+
+          <section className="space-y-2">
+            <p className="text-xs font-semibold t-muted uppercase tracking-wider">1 · Download</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={downloadServer} className="flex-1">
+                <Terminal className="h-3.5 w-3.5" />mental-model-mcp.js
+                <Download className="h-3 w-3 ml-auto opacity-60" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={downloadSnapshot} className="flex-1">
+                <Download className="h-3.5 w-3.5" />snapshot.json
+                <span className="ml-auto text-[10px] opacity-50">{snapshotActive.length} nodes</span>
+              </Button>
+            </div>
+          </section>
+
+          <section className="space-y-1.5">
+            <p className="text-xs font-semibold t-muted uppercase tracking-wider">2 · HTTP endpoints (port 3456)</p>
+            <EndpointRow method="GET"  path="/nodes"            desc="All visible nodes as JSON" />
+            <EndpointRow method="POST" path="/search"           desc='{ query, limit?, category? }' />
+            <EndpointRow method="POST" path="/context"          desc='{ scope?, category?, limit? }' />
+            <EndpointRow method="POST" path="/add"              desc='{ title, content, category?, importance?, tags? }' />
+            <EndpointRow method="GET"  path="/openai-functions" desc="OpenAI function-calling definitions" />
+          </section>
+
+          <section className="space-y-2">
+            <p className="text-xs font-semibold t-muted uppercase tracking-wider">3 · Python example</p>
+            <div className="relative">
+              <pre className="text-[10px] font-mono rounded-lg border t-border bg-black/30 px-3 py-2.5 overflow-x-auto t-muted leading-relaxed">{pythonSnippet}</pre>
+              <button
+                onClick={() => copyPython(pythonSnippet)}
+                className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded border t-border bg-black/40 hover:bg-white/10 transition-colors"
+              >
+                {pythonCopied
+                  ? <ClipboardCheck className="h-3 w-3 text-green-400" />
+                  : <Clipboard className="h-3 w-3 t-muted" />}
+              </button>
+            </div>
+            <p className="text-[10px] t-muted">
+              For the OpenAI Assistants API, download the snapshot and upload it as a file for retrieval — no server needed.
+            </p>
+          </section>
+
+          <div className="flex justify-end pt-1">
+            <Button size="sm" variant="ghost" onClick={onClose}><X className="h-3.5 w-3.5" />Close</Button>
+          </div>
         </div>
-      </section>
-
-      {/* Tools reference */}
-      <section className="space-y-1.5">
-        <p className="text-xs font-semibold t-muted uppercase tracking-wider">Available tools</p>
-        <ToolRow name="memory_search" sig='query, limit?, category?' desc="Semantic search over your graph" />
-        <ToolRow name="memory_get_context" sig='scope?, category?, limit?' desc="Full context block, optionally scoped" />
-      </section>
-
-      <div className="flex items-center justify-between pt-1">
-        <a
-          href="https://modelcontextprotocol.io/docs/concepts/servers"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-[11px] t-muted hover:t-text transition-colors"
-        >
-          <ExternalLink className="h-3 w-3" />MCP docs
-        </a>
-        <Button size="sm" variant="ghost" onClick={onClose}>
-          <X className="h-3.5 w-3.5" />Close
-        </Button>
-      </div>
+      )}
     </div>
+  )
+}
+
+function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex-1 flex items-center justify-center gap-1.5 text-[11px] py-1.5 rounded-md transition-colors',
+        active ? 'bg-white/10 t-text' : 't-muted hover:t-text',
+      )}
+    >
+      {icon}{label}
+    </button>
   )
 }
 
@@ -160,6 +236,17 @@ function ToolRow({ name, sig, desc }: { name: string; sig: string; desc: string 
       <code className="shrink-0 text-[10px] bg-white/8 border t-border rounded px-1.5 py-0.5 t-accent font-mono">{name}</code>
       <span className="t-muted font-mono opacity-60 text-[10px] mt-0.5">{sig}</span>
       <span className="t-muted ml-auto text-right">{desc}</span>
+    </div>
+  )
+}
+
+function EndpointRow({ method, path, desc }: { method: string; path: string; desc: string }) {
+  const methodColor = method === 'GET' ? 'text-blue-400' : 'text-green-400'
+  return (
+    <div className="flex items-center gap-2 text-[11px]">
+      <span className={cn('shrink-0 text-[10px] font-mono font-semibold w-8', methodColor)}>{method}</span>
+      <code className="shrink-0 text-[10px] bg-white/8 border t-border rounded px-1.5 py-0.5 t-accent font-mono">{path}</code>
+      <span className="t-muted ml-auto text-right text-[10px]">{desc}</span>
     </div>
   )
 }
