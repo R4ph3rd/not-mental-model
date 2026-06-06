@@ -57,6 +57,7 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
   const [primingState, setPrimingState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
   const bottomRef = useRef<HTMLDivElement>(null)
+  const mem0 = getMem0Config()
   // Refs so primeContext always sees the latest nodes/groups without needing them as deps
   const nodesRef  = useRef(nodes)
   nodesRef.current  = nodes
@@ -69,15 +70,15 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
 
   // ── Prime context when discussion opens ──────────────────────────────────
   const primeContext = useCallback(async () => {
-    const mem0 = getMem0Config()
+    const currentMem0 = getMem0Config()
     setPrimingState('loading')
     try {
       let primed: RecalledMemory[] = []
 
-      if (mem0) {
+      if (currentMem0) {
         // Fetch double the limit so importance re-ranking has candidates to sort
         const found = await mem0Search(
-          mem0.apiKey, mem0.userId,
+          currentMem0.apiKey, currentMem0.userId,
           'user background knowledge preferences goals skills projects',
           PRIME_LIMIT * 2,
         )
