@@ -10,7 +10,6 @@ const PROJECTS_KEY = 'mm-projects'
 const CONVS_KEY    = 'mm-conversations'
 const GROUPS_KEY   = 'mm-groups'
 
-function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
 function now() { return new Date().toISOString() }
 function daysAgo(n: number) { return new Date(Date.now() - n * 86400000).toISOString() }
 
@@ -233,7 +232,7 @@ function defaultNodes(): MentalModelNode[] {
 
 function migrateNode(raw: Partial<MentalModelNode> & { conversationId?: string }): MentalModelNode {
   return {
-    id: raw.id ?? uid(),
+    id: raw.id ?? crypto.randomUUID(),
     category: raw.category ?? 'fact',
     title: raw.title ?? '',
     content: raw.content ?? '',
@@ -373,7 +372,7 @@ export function useMentalModelStore() {
     conversationIds?: string[],
   ) => {
     const node: MentalModelNode = {
-      id: uid(),
+      id: crypto.randomUUID(),
       ...data,
       provenance: data.provenance ?? 'user',
       confirmed: data.confirmed ?? true,
@@ -522,7 +521,7 @@ export function useMentalModelStore() {
 
   const addSummaryNode = useCallback((summary: { title: string; content: string; tags: string[]; scope: string }) => {
     const node: MentalModelNode = {
-      id: uid(), category: 'fact',
+      id: crypto.randomUUID(), category: 'fact',
       title: summary.title, content: summary.content, tags: summary.tags,
       confidence: 'high', source: 'claude-summary',
       createdAt: now(), updatedAt: now(),
@@ -551,7 +550,7 @@ export function useMentalModelStore() {
   }, [])
 
   const addProject = useCallback((name: string, color: string) => {
-    const p: Project = { id: `p-${uid()}`, name, color, createdAt: now() }
+    const p: Project = { id: `p-${crypto.randomUUID()}`, name, color, createdAt: now() }
     mutateProjects(prev => [...prev, p])
     return p
   }, [mutateProjects])
@@ -573,7 +572,7 @@ export function useMentalModelStore() {
   }, [])
 
   const addConversation = useCallback((projectId: string | undefined, title: string, source?: string) => {
-    const c: Conversation = { id: `c-${uid()}`, projectId, title, source, createdAt: now() }
+    const c: Conversation = { id: `c-${crypto.randomUUID()}`, projectId, title, source, createdAt: now() }
     mutateConvs(prev => [...prev, c])
     return c
   }, [mutateConvs])
@@ -597,7 +596,7 @@ export function useMentalModelStore() {
   }, [])
 
   const addGroup = useCallback((name: string, color: string, parentId?: string) => {
-    const g: MemoryGroup = { id: `g-${uid()}`, name, color, active: true, parentId, createdAt: now() }
+    const g: MemoryGroup = { id: `g-${crypto.randomUUID()}`, name, color, active: true, parentId, createdAt: now() }
     mutateGroups(prev => [...prev, g])
     return g
   }, [mutateGroups])
