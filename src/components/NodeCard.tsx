@@ -61,7 +61,7 @@ function InlineText({ value, onSave, tag = 'p', className }: {
   function handleClick(e: React.MouseEvent) {
     if (!e.ctrlKey && !e.metaKey) e.stopPropagation()
   }
-  function save() { setEditing(false); if (draft.trim() && draft.trim() !== value) onSave(draft.trim()) }
+  function save() { setEditing(false); if (draft.trim() !== value) onSave(draft.trim()) }
   function onKey(e: React.KeyboardEvent) {
     if (e.key === 'Escape') { setEditing(false); setDraft(value) }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save() }
@@ -77,13 +77,23 @@ function InlineText({ value, onSave, tag = 'p', className }: {
       />
     )
   }
+
+  const isEmpty = !value.trim()
+  const commonProps = {
+    onClick:       (e: React.MouseEvent) => { if (isEmpty) startEdit(e); else if (!e.ctrlKey && !e.metaKey) e.stopPropagation() },
+    onDoubleClick: startEdit,
+    title: isEmpty ? 'Click to edit' : 'Double-click to edit inline',
+  }
+
   return tag === 'h3'
-    ? <h3 onClick={handleClick} onDoubleClick={startEdit}
-        className={cn('cursor-text select-text', className)}
-        title="Double-click to edit inline">{value}</h3>
-    : <p onClick={handleClick} onDoubleClick={startEdit}
-        className={cn('cursor-text select-text', className)}
-        title="Double-click to edit inline">{value}</p>
+    ? <h3 {...commonProps}
+        className={cn('cursor-text', isEmpty && 'italic opacity-40 select-none', !isEmpty && 'select-text', className)}>
+        {isEmpty ? '(untitled)' : value}
+      </h3>
+    : <p {...commonProps}
+        className={cn('cursor-text', isEmpty && 'italic opacity-40 select-none', !isEmpty && 'select-text', className)}>
+        {isEmpty ? '(empty)' : value}
+      </p>
 }
 
 export function NodeCard({

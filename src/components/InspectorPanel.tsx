@@ -140,11 +140,15 @@ export function InspectorPanel({ node, conversations, onClose, onUpdate, onDelet
           />
         ) : (
           <span
-            className="flex-1 text-sm font-medium t-text break-words cursor-text select-none mt-0.5"
+            className={cn(
+              'flex-1 text-sm font-medium break-words mt-0.5',
+              n.title ? 'cursor-text select-none t-text' : 'cursor-pointer italic opacity-40 select-none t-muted',
+            )}
+            onClick={n.title ? undefined : () => { setTitleDraft(''); setEditingTitle(true) }}
             onDoubleClick={() => { setTitleDraft(n.title); setEditingTitle(true) }}
-            title="Double-click to rename"
+            title={n.title ? 'Double-click to rename' : 'Click to add title'}
           >
-            {n.title}
+            {n.title || '(untitled — click to edit)'}
           </span>
         )}
 
