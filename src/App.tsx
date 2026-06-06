@@ -39,7 +39,7 @@ export default function App() {
   const {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
-    importNodes, addSummaryNode, bumpAccess,
+    importNodes, addSummaryNode, bumpAccess, restoreGraph,
     projects, addProject, updateProject, deleteProject,
     conversations, addConversation, updateConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
@@ -187,11 +187,44 @@ export default function App() {
     })
   }, [])
 
-  function handleExport() {
-    const toExport = selectedIds.size > 0 ? selectedNodes : nodes
-    const blob = new Blob([JSON.stringify(toExport, null, 2)], { type: 'application/json' })
+  function handleBackup() {
+    const backup = {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      nodes,
+      projects,
+      conversations,
+      groups,
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob); a.download = `mental-model-${Date.now()}.json`; a.click()
+    const date = new Date().toISOString().slice(0, 10)
+    a.href = URL.createObjectURL(blob)
+    a.download = `mental-model-backup-${date}.json`
+    a.click()
+  }
+
+  function handleRestoreFile(file: File) {
+    const reader = new FileReader()
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target?.result as string)
+        // Accept both full backup format and a bare node array (forward-compat)
+        const isBackup = data && typeof data === 'object' && Array.isArray(data.nodes)
+        const isBareArray = Array.isArray(data)
+        if (!isBackup && !isBareArray) { alert('Unrecognised backup format.'); return }
+        const payload = isBackup ? data : { nodes: data }
+        const nodeCount = payload.nodes.length
+        const ok = window.confirm(
+          `Restore ${nodeCount} node${nodeCount !== 1 ? 's' : ''}` +
+          (payload.projects ? `, ${payload.projects.length} project(s)` : '') +
+          `?\n\nThis will replace your current graph. Make sure you have exported a backup first.`,
+        )
+        if (!ok) return
+        restoreGraph(payload)
+      } catch { alert('Could not parse backup file.') }
+    }
+    reader.readAsText(file)
   }
 
   function getLinkedNodes(ids: string[]) { return nodes.filter(n => ids.includes(n.id)) }
@@ -402,9 +435,22 @@ export default function App() {
                 categoryFilter={categoryFilter}
                 hasSearch={!!search.trim()}
               />
-              <Button size="sm" variant="ghost" onClick={handleExport} title="Export as JSON">
-                <Download className="h-3.5 w-3.5" />Export
+              <Button size="sm" variant="ghost" onClick={handleBackup} title="Export full backup (nodes, projects, conversations, groups)">
+                <Download className="h-3.5 w-3.5" />Backup
               </Button>
+              <Button size="sm" variant="ghost"
+                title="Restore from a backup file"
+                onClick={() => { const el = document.getElementById('restore-file-input') as HTMLInputElement | null; el?.click() }}
+              >
+                <FolderInput className="h-3.5 w-3.5" />Restore
+              </Button>
+              <input
+                id="restore-file-input"
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) { handleRestoreFile(f); e.target.value = '' } }}
+              />
               <Button size="sm" variant="ghost" onClick={() => setMcpOpen(true)} title="Connect to agents via MCP">
                 <Server className="h-3.5 w-3.5" />Connect
               </Button>

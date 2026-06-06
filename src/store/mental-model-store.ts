@@ -642,6 +642,21 @@ export function useMentalModelStore() {
     mutateGroups(prev => prev.map(g => g.id === id ? { ...g, active: !g.active } : g))
   }, [mutateGroups])
 
+  // ── Backup / restore ─────────────────────────────────────────────
+
+  const restoreGraph = useCallback((data: {
+    nodes:         Array<Partial<MentalModelNode> & { conversationId?: string }>
+    projects?:     Project[]
+    conversations?: Conversation[]
+    groups?:       MemoryGroup[]
+  }) => {
+    const restored = data.nodes.map(n => migrateNode(n))
+    setNodes(restored);         persistNodes(restored)
+    if (data.projects)      { setProjects(data.projects);           persistProjects(data.projects) }
+    if (data.conversations) { setConversations(data.conversations); persistConversations(data.conversations) }
+    if (data.groups)        { setGroups(data.groups);               persistGroups(data.groups) }
+  }, [])
+
   return {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
@@ -649,5 +664,6 @@ export function useMentalModelStore() {
     projects, addProject, updateProject, deleteProject,
     conversations, addConversation, updateConversation, deleteConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
+    restoreGraph,
   }
 }
