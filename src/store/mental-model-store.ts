@@ -407,6 +407,21 @@ export function useMentalModelStore() {
 
   const updateNode = useCallback((id: string, data: Partial<NodeFormData> & { conversationIds?: string[] }) => {
     mutateNodes(prev => prev.map(n => n.id === id ? { ...n, ...data, updatedAt: now() } : n))
+
+    // Marking sensitive: delete from mem0 so the agent can no longer access it
+    if (data.sensitive === true) {
+      const node = nodesRef.current.find(n => n.id === id)
+      if (node?.mem0Id && !node.sensitive) {
+        mutateNodes(prev => prev.map(n => n.id === id ? { ...n, mem0Id: undefined } : n))
+        void (async () => {
+          const cfg = getMem0Config()
+          if (!cfg) return
+          try { await mem0Delete(cfg.apiKey, node.mem0Id!) } catch { /* non-fatal */ }
+        })()
+      }
+      return
+    }
+
     // Sync to mem0 when any text-affecting or semantic field changes
     const TEXT_FIELDS = ['title', 'content', 'tags', 'scope', 'confidence', 'memoryType', 'importance'] as const
     const hasSemanticChange = TEXT_FIELDS.some(f => f in data)
