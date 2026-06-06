@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_CONFIGS, callProvider, getDefaultProvider } from '@/lib/providers'
 import { getMem0Config, mem0Search, mem0Add, type Mem0Memory } from '@/lib/mem0'
+import { EXTRACT_SYSTEM } from '@/lib/prompts'
 import { computeDecayScore } from '@/lib/decay'
 import { cn } from '@/lib/utils'
 import type { MentalModelNode, NodeCategory, ConfidenceLevel, MemoryGroup } from '@/types/mental-model'
@@ -37,13 +38,6 @@ const CHAT_SYSTEM = (primed: string, recalled: string) =>
   `You are a helpful AI assistant with access to the user's personal knowledge graph.
 ${primed ? `\nBackground knowledge about the user:\n${primed}\n` : ''}${recalled ? `\nContext specifically relevant to this question:\n${recalled}\n` : ''}
 Use these facts naturally in your responses. Be helpful, direct, and concise.`
-
-const EXTRACT_SYSTEM = `Extract key new persistent facts about the user from this conversation exchange.
-Return ONLY a compact JSON array (no markdown fences): [{title, content, category, confidence, memoryType}]
-- category: "fact"|"preference"|"goal"|"skill"|"project"|"conversation"
-- confidence: "high"|"medium"|"low"
-- memoryType: "semantic"|"episodic"
-Extract only genuinely new, lasting information. Max 3 items. If nothing memorable, return [].`
 
 // How many memories to pull as base context on discussion open
 const PRIME_LIMIT = 12
