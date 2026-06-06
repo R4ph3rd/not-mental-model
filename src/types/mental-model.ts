@@ -64,6 +64,8 @@ export interface MentalModelNode {
   sensitive: boolean
   // mem0 cloud memory ID — set after successful sync, used for updates/deletes
   mem0Id?: string
+  // Bumped whenever this node is surfaced in chat recall — feeds decay recency
+  lastAccessedAt?: string
 }
 
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {

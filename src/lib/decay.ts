@@ -10,7 +10,8 @@ const CONF_WEIGHT: Record<ConfidenceLevel, number> = {
 // Pinned nodes are always retained at full score.
 export function computeDecayScore(node: MentalModelNode): number {
   if (node.pinned) return 1.0
-  const daysSince = (Date.now() - new Date(node.updatedAt).getTime()) / 86400000
+  const lastTouched = node.lastAccessedAt ?? node.updatedAt
+  const daysSince = (Date.now() - new Date(lastTouched).getTime()) / 86400000
   const recency = Math.max(0, 1 - daysSince / 90)
   const conf = CONF_WEIGHT[node.confidence]
   return Math.min(1, recency * 0.4 + node.importance * 0.35 + conf * 0.25)

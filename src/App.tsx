@@ -13,6 +13,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { NodeCard } from '@/components/NodeCard'
 import { ClaudeSync } from '@/components/ClaudeSync'
 import { StatsBar } from '@/components/StatsBar'
+import { StaleReviewPanel, staleCount } from '@/components/StaleReviewPanel'
 import { CopyContextButton } from '@/components/CopyContextButton'
 import { Canvas } from '@/components/canvas/Canvas'
 import { GraphView } from '@/components/graph/GraphView'
@@ -24,6 +25,10 @@ import { Onboarding } from '@/components/Onboarding'
 import { InferenceModal } from '@/components/InferenceModal'
 import { McpExportModal } from '@/components/McpExportModal'
 import type { InferenceMode } from '@/components/InferenceModal'
+import { DedupReviewModal } from '@/components/DedupReviewModal'
+import type { ResolvedAction } from '@/components/DedupReviewModal'
+import { classifyIncoming } from '@/lib/dedup'
+import type { ClassifiedNode } from '@/lib/dedup'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import type { NodeCategory, MentalModelNode } from '@/types/mental-model'
@@ -34,7 +39,7 @@ export default function App() {
   const {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
-    importNodes, addSummaryNode,
+    importNodes, addSummaryNode, bumpAccess,
     projects, addProject, updateProject, deleteProject,
     conversations, addConversation, updateConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
@@ -138,6 +143,7 @@ export default function App() {
   }, [nodes, categoryFilter, conversationFilter, groupFilter, search])
 
   const activeCount   = useMemo(() => nodes.filter(isNodeVisibleToAgent).length, [nodes, inactiveGroupIds])
+  const nStale        = useMemo(() => staleCount(nodes), [nodes])
 
   type GridSection = { id: string; name: string; color: string; items: MentalModelNode[] }
   const gridSections = useMemo((): GridSection[] | null => {
@@ -205,8 +211,21 @@ export default function App() {
   }
 
   // Chat / inference: auto-extracts nodes (Governance paper: provenance = 'agent')
+  function doAddAgentNodes(
+    raw: Array<{ title: string; content: string; category: NodeCategory; confidence: 'high' | 'medium' | 'low' }>,
+    targetProject?: string,
+    targetConvs?: string[],
+  ) {
+    for (const n of raw) {
+      addNode({
+        ...n, tags: [], source: 'chat-auto', memoryType: 'semantic',
+        scope: '', importance: 0.7,
+        provenance: 'agent', confirmed: false, sensitive: false,
+      }, targetProject, targetConvs)
+    }
+  }
+
   function handleAgentNodes(raw: Array<{ title: string; content: string; category: NodeCategory; confidence: 'high' | 'medium' | 'low' }>) {
-    // target project = current group filter if it maps to a project
     let targetProject = groupFilter && projects.some(p => p.id === groupFilter) ? groupFilter : undefined
     if (!targetProject && inferMode === 'from-selection') {
       const counts: Record<string, number> = {}
@@ -215,13 +234,67 @@ export default function App() {
       if (top) targetProject = top[0]
     }
     const targetConvs = conversationFilter ? [conversationFilter] : undefined
-    for (const n of raw) {
-      addNode({
-        ...n, tags: [], source: 'chat-auto', memoryType: 'semantic',
-        scope: '', importance: 0.7,
-        provenance: 'agent', confirmed: false, sensitive: false,
-      }, targetProject, targetConvs)
+
+    const { needsReview, clean } = classifyIncoming(
+      raw.map(n => ({ ...n, tags: [], source: 'chat-auto', memoryType: 'semantic', scope: '', importance: 0.7 })),
+      nodes,
+    )
+    // Add clean nodes immediately
+    doAddAgentNodes(clean as typeof raw, targetProject, targetConvs)
+    // Queue conflict/duplicate nodes for review
+    if (needsReview.length > 0) {
+      setPendingImport({
+        classified: needsReview,
+        cleanCount: clean.length,
+        onApply: actions => applyDedupActions(actions, { targetProject, targetConvs }),
+      })
     }
+  }
+
+  function handleImportWithDedup(incoming: import('@/types/mental-model').MentalModelNode[]) {
+    const { needsReview, clean } = classifyIncoming(incoming, nodes)
+    importNodes(clean as import('@/types/mental-model').MentalModelNode[])
+    if (needsReview.length > 0) {
+      setPendingImport({
+        classified: needsReview,
+        cleanCount: clean.length,
+        onApply: actions => applyDedupActions(actions, {}),
+      })
+    }
+  }
+
+  function applyDedupActions(
+    actions: ResolvedAction[],
+    ctx: { targetProject?: string; targetConvs?: string[] },
+  ) {
+    for (const action of actions) {
+      if (action.kind === 'skip') continue
+      if (action.kind === 'replace' || action.kind === 'merge') {
+        deleteNode(action.replaceId)
+      }
+      const nodeData = action.kind === 'merge' ? { ...action.base, ...action.merged } : action.node
+      const n = nodeData as Record<string, unknown>
+      addNode(
+        {
+          title:      (n.title as string)    ?? '',
+          content:    (n.content as string)  ?? '',
+          category:   (n.category as NodeCategory) ?? 'fact',
+          confidence: (n.confidence as import('@/types/mental-model').ConfidenceLevel) ?? 'medium',
+          tags:       (n.tags as string[])   ?? [],
+          source:     (n.source as string)   ?? '',
+          memoryType: (n.memoryType as import('@/types/mental-model').MemoryType) ?? 'semantic',
+          scope:      (n.scope as string)    ?? '',
+          importance: (n.importance as number) ?? 0.7,
+          provenance: (n.provenance as import('@/types/mental-model').Provenance) ?? 'extracted',
+          confirmed:  (n.confirmed as boolean) ?? true,
+          sensitive:  (n.sensitive as boolean) ?? false,
+          groupIds:   (n.groupIds as string[]) ?? [],
+        },
+        ctx.targetProject,
+        ctx.targetConvs,
+      )
+    }
+    setPendingImport(null)
   }
 
   function handleMoveNodeToGroup(nodeId: string, groupId: string) {
@@ -356,6 +429,16 @@ export default function App() {
               }}>
                 <Plus className="h-3.5 w-3.5" />Add
               </Button>
+              {nStale > 0 && (
+                <button
+                  onClick={() => setStaleOpen(v => !v)}
+                  title={`${nStale} stale node${nStale > 1 ? 's' : ''} — click to review`}
+                  className="relative flex items-center gap-1 text-[11px] text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 rounded-lg px-2 h-8 transition-colors"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {nStale}
+                </button>
+              )}
               <Button size="icon" variant="ghost" className="h-8 w-8"
                 onClick={() => { setSettingsOpen(v => !v); setChatOpen(false) }} title="Settings">
                 <Settings className="h-4 w-4" />
@@ -529,11 +612,23 @@ export default function App() {
                 nodes={nodes}
                 groups={groups}
                 onAgentNodes={handleAgentNodes}
+                onBumpAccess={bumpAccess}
                 onClose={() => setChatOpen(false)}
               />
             )}
 
             {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+            {staleOpen && (
+              <div className="w-80 shrink-0 border-l t-border flex flex-col overflow-hidden">
+                <StaleReviewPanel
+                  nodes={nodes}
+                  onToggleActive={toggleActive}
+                  onTogglePin={togglePin}
+                  onBumpAccess={bumpAccess}
+                  onClose={() => setStaleOpen(false)}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -546,7 +641,7 @@ export default function App() {
 <Dialog open={aiOpen} onOpenChange={setAiOpen}>
           <DialogContent className="max-w-xl">
             <ClaudeSync
-              onImport={importNodes}
+              onImport={handleImportWithDedup}
               onClose={() => setAiOpen(false)}
               selectedNodes={selectedNodes}
               onSummary={s => { addSummaryNode(s); setSelectedIds(new Set()) }}
