@@ -93,3 +93,27 @@ export const CONFIDENCE_COLORS: Record<ConfidenceLevel, string> = {
   medium: 'text-yellow-400',
   low: 'text-red-400',
 }
+
+/**
+ * Full portable backup produced by "Backup" and consumed by "Restore".
+ *
+ * The four collections are independent flat arrays of ID-keyed objects.
+ * All hierarchy is encoded as ID references on the entities themselves:
+ *   - node.projectId          → optional Project
+ *   - node.conversationIds[]  → zero or more Conversations (no project required)
+ *   - node.groupIds[]         → zero or more MemoryGroups (any nesting depth)
+ *   - node.linkedIds[]        → peer nodes (graph edges)
+ *   - conversation.projectId  → optional Project
+ *   - group.parentId          → optional parent Group or Project (arbitrary depth)
+ *
+ * A valid backup may have any subset of these populated — including all four
+ * empty (a blank graph), or only nodes with no hierarchy at all.
+ */
+export interface GraphBackup {
+  schemaVersion: 1
+  exportedAt: string
+  nodes:         MentalModelNode[]
+  projects:      Project[]
+  conversations: Conversation[]
+  groups:        MemoryGroup[]
+}

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type {
   MentalModelNode, NodeCategory, ConfidenceLevel, MemoryType,
-  Project, Conversation, MemoryGroup, Provenance,
+  Project, Conversation, MemoryGroup, Provenance, GraphBackup,
 } from '@/types/mental-model'
 import { getMem0Config, mem0AddMemory, mem0Update, mem0Delete } from '@/lib/mem0'
 
@@ -232,29 +232,33 @@ function defaultNodes(): MentalModelNode[] {
 
 function migrateNode(raw: Partial<MentalModelNode> & { conversationId?: string }): MentalModelNode {
   return {
-    id: raw.id ?? crypto.randomUUID(),
-    category: raw.category ?? 'fact',
-    title: raw.title ?? '',
-    content: raw.content ?? '',
-    tags: raw.tags ?? [],
-    confidence: raw.confidence ?? 'medium',
-    source: raw.source,
-    createdAt: raw.createdAt ?? now(),
-    updatedAt: raw.updatedAt ?? now(),
-    linkedIds: raw.linkedIds ?? [],
-    active: raw.active ?? true,
-    pinned: raw.pinned ?? false,
-    memoryType: raw.memoryType ?? 'semantic',
-    scope: raw.scope ?? '',
-    importance: raw.importance ?? 0.8,
-    position: raw.position,
-    projectId: raw.projectId,
-    // migrate legacy single conversationId
+    id:          raw.id ?? crypto.randomUUID(),
+    category:    raw.category ?? 'fact',
+    title:       raw.title ?? '',
+    content:     raw.content ?? '',
+    tags:        raw.tags ?? [],
+    confidence:  raw.confidence ?? 'medium',
+    source:      raw.source,
+    createdAt:   raw.createdAt ?? now(),
+    updatedAt:   raw.updatedAt ?? now(),
+    linkedIds:   raw.linkedIds ?? [],
+    active:      raw.active ?? true,
+    pinned:      raw.pinned ?? false,
+    memoryType:  raw.memoryType ?? 'semantic',
+    scope:       raw.scope ?? '',
+    importance:  raw.importance ?? 0.8,
+    position:    raw.position,
+    projectId:   raw.projectId,
+    // migrate legacy single conversationId → array
     conversationIds: raw.conversationIds ?? (raw.conversationId ? [raw.conversationId] : []),
-    groupIds: raw.groupIds ?? [],
-    provenance: raw.provenance ?? 'user',
-    confirmed: raw.confirmed ?? true,
-    sensitive: raw.sensitive ?? false,
+    groupIds:    raw.groupIds ?? [],
+    provenance:  raw.provenance ?? 'user',
+    confirmed:   raw.confirmed ?? true,
+    sensitive:   raw.sensitive ?? false,
+    // preserve optional sync/access fields so restore doesn't corrupt mem0 state or decay timeline
+    mem0Id:          raw.mem0Id,
+    mem0SyncState:   raw.mem0SyncState,
+    lastAccessedAt:  raw.lastAccessedAt,
   }
 }
 
@@ -644,17 +648,26 @@ export function useMentalModelStore() {
 
   // ── Backup / restore ─────────────────────────────────────────────
 
-  const restoreGraph = useCallback((data: {
-    nodes:         Array<Partial<MentalModelNode> & { conversationId?: string }>
-    projects?:     Project[]
-    conversations?: Conversation[]
-    groups?:       MemoryGroup[]
-  }) => {
-    const restored = data.nodes.map(n => migrateNode(n))
-    setNodes(restored);         persistNodes(restored)
-    if (data.projects)      { setProjects(data.projects);           persistProjects(data.projects) }
-    if (data.conversations) { setConversations(data.conversations); persistConversations(data.conversations) }
-    if (data.groups)        { setGroups(data.groups);               persistGroups(data.groups) }
+  /**
+   * Full-graph restore from a GraphBackup.
+   * Replaces ALL four collections so that every hierarchy configuration —
+   * root nodes, nested groups, root conversations, arbitrary parentId depth —
+   * is captured exactly. Each collection defaults to [] when absent so a
+   * blank hierarchy (e.g. a user who never created projects) is correctly
+   * represented rather than leaving stale data from a previous session.
+   *
+   * For a bare-node-array import (old format / partial export) use importNodes
+   * instead — that path merges without touching the project/group/conversation
+   * hierarchy.
+   */
+  const restoreGraph = useCallback((backup: GraphBackup) => {
+    const restored = backup.nodes.map(n =>
+      migrateNode(n as Partial<MentalModelNode> & { conversationId?: string }),
+    )
+    setNodes(restored);                     persistNodes(restored)
+    setProjects(backup.projects);           persistProjects(backup.projects)
+    setConversations(backup.conversations); persistConversations(backup.conversations)
+    setGroups(backup.groups);               persistGroups(backup.groups)
   }, [])
 
   return {

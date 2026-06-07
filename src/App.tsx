@@ -31,7 +31,7 @@ import { classifyIncoming } from '@/lib/dedup'
 import type { ClassifiedNode, PendingNode } from '@/lib/dedup'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
-import type { NodeCategory, MentalModelNode } from '@/types/mental-model'
+import type { NodeCategory, MentalModelNode, GraphBackup } from '@/types/mental-model'
 
 type View = 'grid' | 'canvas' | 'graph' | 'timeline'
 
@@ -209,20 +209,48 @@ export default function App() {
     reader.onload = e => {
       try {
         const data = JSON.parse(e.target?.result as string)
-        // Accept both full backup format and a bare node array (forward-compat)
-        const isBackup = data && typeof data === 'object' && Array.isArray(data.nodes)
-        const isBareArray = Array.isArray(data)
-        if (!isBackup && !isBareArray) { alert('Unrecognised backup format.'); return }
-        const payload = isBackup ? data : { nodes: data }
-        const nodeCount = payload.nodes.length
-        const ok = window.confirm(
-          `Restore ${nodeCount} node${nodeCount !== 1 ? 's' : ''}` +
-          (payload.projects ? `, ${payload.projects.length} project(s)` : '') +
-          `?\n\nThis will replace your current graph. Make sure you have exported a backup first.`,
-        )
-        if (!ok) return
-        restoreGraph(payload)
-      } catch { alert('Could not parse backup file.') }
+
+        // ── Full backup (object with .nodes array) ─────────────────────────
+        if (data && typeof data === 'object' && !Array.isArray(data) && Array.isArray(data.nodes)) {
+          // Normalise: any collection absent in the file (e.g. an older export
+          // that pre-dates projects) defaults to [] so the restore is complete
+          // and no stale hierarchy is left behind.
+          const backup: GraphBackup = {
+            schemaVersion: 1,
+            exportedAt:    data.exportedAt ?? new Date().toISOString(),
+            nodes:         data.nodes,
+            projects:      Array.isArray(data.projects)      ? data.projects      : [],
+            conversations: Array.isArray(data.conversations) ? data.conversations : [],
+            groups:        Array.isArray(data.groups)        ? data.groups        : [],
+          }
+          const summary = [
+            `${backup.nodes.length} node${backup.nodes.length !== 1 ? 's' : ''}`,
+            backup.projects.length      ? `${backup.projects.length} project(s)`      : null,
+            backup.conversations.length ? `${backup.conversations.length} conversation(s)` : null,
+            backup.groups.length        ? `${backup.groups.length} group(s)`          : null,
+          ].filter(Boolean).join(', ')
+          const ok = window.confirm(
+            `Restore ${summary}?\n\nThis will replace your entire current graph. Export a backup first if you need to keep your current data.`,
+          )
+          if (!ok) return
+          restoreGraph(backup)
+          return
+        }
+
+        // ── Bare node array (old export / partial export) ──────────────────
+        // Merges nodes via importNodes — does NOT touch the project/group/
+        // conversation hierarchy so existing structure is preserved.
+        if (Array.isArray(data)) {
+          const ok = window.confirm(
+            `Import ${data.length} node${data.length !== 1 ? 's' : ''} (bare list — hierarchy collections will not be replaced)?\n\nExisting nodes with the same ID will be skipped.`,
+          )
+          if (!ok) return
+          importNodes(data as MentalModelNode[])
+          return
+        }
+
+        alert('Unrecognised file format. Expected a backup JSON or a bare node array.')
+      } catch { alert('Could not parse the file. Make sure it is a valid JSON backup.') }
     }
     reader.readAsText(file)
   }
