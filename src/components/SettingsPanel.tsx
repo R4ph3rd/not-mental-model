@@ -61,71 +61,6 @@ export function SettingsPanel({ onClose, onExtract, onImportMemory, onBackup, on
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-        {/* ── Data & Import ───────────────────────────── */}
-        <section className="space-y-3">
-          <p className="text-[10px] uppercase tracking-widest t-muted">Data &amp; Import</p>
-          <div className="grid grid-cols-2 gap-2">
-            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onExtract}>
-              <Sparkles className="h-3.5 w-3.5 t-accent shrink-0" />Extract
-            </Button>
-            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onImportMemory}>
-              <Brain className="h-3.5 w-3.5 t-accent shrink-0" />Import Memory
-            </Button>
-            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onBackup}>
-              <Download className="h-3.5 w-3.5 shrink-0" />Save Backup
-            </Button>
-            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onRestore}>
-              <FolderInput className="h-3.5 w-3.5 shrink-0" />Restore
-            </Button>
-          </div>
-          <Button size="sm" variant="secondary" className="w-full h-8 text-xs justify-start gap-1.5" onClick={onConnect}>
-            <Server className="h-3.5 w-3.5 shrink-0" />Connect to agents (MCP)
-          </Button>
-        </section>
-
-        {/* ── Memory Sync ─────────────────────────────── */}
-        <section className="space-y-3">
-          <p className="text-[10px] uppercase tracking-widest t-muted flex items-center gap-1.5">
-            <Wifi className="h-3 w-3" /> Memory sync
-          </p>
-
-          {/* Mem0 status */}
-          <div className={cn(
-            'flex items-start gap-2 rounded-lg px-3 py-2 border text-xs',
-            mem0Active ? 'bg-green-500/8 border-green-500/20' : 'bg-yellow-500/8 border-yellow-500/20'
-          )}>
-            {mem0Active
-              ? <Wifi className="h-3.5 w-3.5 mt-0.5 shrink-0 text-green-400" />
-              : <WifiOff className="h-3.5 w-3.5 mt-0.5 shrink-0 text-yellow-400" />}
-            <div className="flex-1 min-w-0">
-              <p className={cn('font-medium', mem0Active ? 'text-green-400' : 'text-yellow-400')}>
-                Mem0{!mem0Active && ' — not configured'}
-              </p>
-              <p className="text-[10px] t-muted mt-0.5">
-                {mem0Active ? 'Live bidirectional sync active' : 'Add your API key below to enable live sync'}
-              </p>
-            </div>
-            <a href="https://app.mem0.ai" target="_blank" rel="noopener noreferrer" className="t-muted hover:t-accent mt-0.5">
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
-
-          {/* Other platforms */}
-          {(['claude.ai', 'ChatGPT', 'Gemini (web)'] as const).map(name => (
-            <div key={name} className="flex items-start gap-2 rounded-lg px-3 py-2 border t-card t-border opacity-60 text-xs">
-              <WifiOff className="h-3.5 w-3.5 mt-0.5 shrink-0 t-muted" />
-              <div>
-                <p className="font-medium t-muted">{name}</p>
-                <p className="text-[10px] t-muted mt-0.5">No memory API — use "Copy context" to sync</p>
-              </div>
-            </div>
-          ))}
-
-          <ApiKeyRow label="Mem0 API key" storageKey="mm-mem0-key" placeholder="m0-…" />
-          <ApiKeyRow label="Mem0 user ID" storageKey="mm-mem0-user" placeholder="your-username" type="text" />
-          <p className="text-[10px] t-muted">User ID scopes your memories in Mem0 — any string works.</p>
-        </section>
-
         {/* ── Appearance ─────────────────────────────── */}
         <section className="space-y-4">
           <p className="text-[10px] uppercase tracking-widest t-muted">Appearance</p>
@@ -156,6 +91,73 @@ export function SettingsPanel({ onClose, onExtract, onImportMemory, onBackup, on
             <p className="text-[10px] t-muted">{COLOR_PRESETS.find(p => p.hue === primaryHue)?.name ?? 'Custom'}</p>
           </div>
         </section>
+
+        {/* ── Data & Import ───────────────────────────── */}
+        <section className="space-y-3">
+          <p className="text-[10px] uppercase tracking-widest t-muted">Data &amp; Import</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onExtract}>
+              <Sparkles className="h-3.5 w-3.5 t-accent shrink-0" />Extract
+            </Button>
+            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onImportMemory}>
+              <Brain className="h-3.5 w-3.5 t-accent shrink-0" />Import Memory
+            </Button>
+            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onBackup}>
+              <Download className="h-3.5 w-3.5 shrink-0" />Save Backup
+            </Button>
+            <Button size="sm" variant="secondary" className="h-8 text-xs justify-start gap-1.5" onClick={onRestore}>
+              <FolderInput className="h-3.5 w-3.5 shrink-0" />Restore
+            </Button>
+          </div>
+          <Button size="sm" variant="secondary" className="w-full h-8 text-xs justify-start gap-1.5" onClick={onConnect}>
+            <Server className="h-3.5 w-3.5 shrink-0" />Connect to agents (MCP)
+          </Button>
+        </section>
+
+        {/* ── Memory Sync ─────────────────────────────── 
+        <section className="space-y-3">
+          <p className="text-[10px] uppercase tracking-widest t-muted flex items-center gap-1.5">
+            <Wifi className="h-3 w-3" /> Memory sync
+          </p>
+
+          {/* Mem0 status 
+          <div className={cn(
+            'flex items-start gap-2 rounded-lg px-3 py-2 border text-xs',
+            mem0Active ? 'bg-green-500/8 border-green-500/20' : 'bg-yellow-500/8 border-yellow-500/20'
+          )}>
+            {mem0Active
+              ? <Wifi className="h-3.5 w-3.5 mt-0.5 shrink-0 text-green-400" />
+              : <WifiOff className="h-3.5 w-3.5 mt-0.5 shrink-0 text-yellow-400" />}
+            <div className="flex-1 min-w-0">
+              <p className={cn('font-medium', mem0Active ? 'text-green-400' : 'text-yellow-400')}>
+                Mem0{!mem0Active && ' — not configured'}
+              </p>
+              <p className="text-[10px] t-muted mt-0.5">
+                {mem0Active ? 'Live bidirectional sync active' : 'Add your API key below to enable live sync'}
+              </p>
+            </div>
+            <a href="https://app.mem0.ai" target="_blank" rel="noopener noreferrer" className="t-muted hover:t-accent mt-0.5">
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+
+          {/* Other platforms 
+          {(['claude.ai', 'ChatGPT', 'Gemini (web)'] as const).map(name => (
+            <div key={name} className="flex items-start gap-2 rounded-lg px-3 py-2 border t-card t-border opacity-60 text-xs">
+              <WifiOff className="h-3.5 w-3.5 mt-0.5 shrink-0 t-muted" />
+              <div>
+                <p className="font-medium t-muted">{name}</p>
+                <p className="text-[10px] t-muted mt-0.5">No memory API — use "Copy context" to sync</p>
+              </div>
+            </div>
+          ))}
+
+          <ApiKeyRow label="Mem0 API key" storageKey="mm-mem0-key" placeholder="m0-…" />
+          <ApiKeyRow label="Mem0 user ID" storageKey="mm-mem0-user" placeholder="your-username" type="text" />
+          <p className="text-[10px] t-muted">User ID scopes your memories in Mem0 — any string works.</p>
+        </section> */}
+
+        
 
         {/* ── LLM API Keys ───────────────────────────── */}
         <section className="space-y-4">
