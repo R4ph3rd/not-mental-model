@@ -1,20 +1,18 @@
 import { useState } from 'react'
-import { Sparkles, Loader2, AlertCircle, Layers, Brain, ExternalLink } from 'lucide-react'
+import { Sparkles, Loader2, AlertCircle, Brain, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { PROVIDER_CONFIGS, callProvider, getDefaultProvider } from '@/lib/providers'
-import { EXTRACT_SYSTEM, MEMORY_IMPORT_SYSTEM, SUMMARIZE_SYSTEM } from '@/lib/prompts'
+import { EXTRACT_SYSTEM, MEMORY_IMPORT_SYSTEM } from '@/lib/prompts'
 import { cn } from '@/lib/utils'
 import type { MentalModelNode } from '@/types/mental-model'
 
 interface Props {
   onImport: (nodes: MentalModelNode[]) => void
   onClose: () => void
-  selectedNodes?: MentalModelNode[]
-  onSummary?: (s: { title: string; content: string; tags: string[]; scope: string }) => void
-  defaultTab?: 'extract' | 'memory' | 'summarize'
+  defaultTab?: 'extract' | 'memory'
 }
 
 // ── Provider picker ──────────────────────────────────────────────────────────
@@ -177,65 +175,6 @@ function MemoryTab({ provider, onImport, onClose }: { provider: string; onImport
   )
 }
 
-// ── Summarize tab ────────────────────────────────────────────────────────────
-
-function SummarizeTab({ provider, nodes, onSummary, onClose }: {
-  provider: string
-  nodes: MentalModelNode[]
-  onSummary: (s: { title: string; content: string; tags: string[]; scope: string }) => void
-  onClose: () => void
-}) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [preview, setPreview] = useState<{ title: string; content: string; tags: string[]; scope: string } | null>(null)
-
-  async function handleSummarize() {
-    setLoading(true); setError(null); setPreview(null)
-    const nodeText = nodes.map(n => `[${n.category}] ${n.title}: ${n.content}`).join('\n\n')
-    try {
-      const raw = await callProvider(provider, SUMMARIZE_SYSTEM, `Summarize these ${nodes.length} memory nodes:\n\n${nodeText}`)
-      const match = raw.match(/\{[\s\S]*\}/)
-      if (!match) throw new Error('No JSON object in response')
-      setPreview(JSON.parse(match[0]))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="rounded-lg t-card border t-border p-3 space-y-1">
-        <p className="text-xs t-muted font-medium">Summarizing {nodes.length} nodes</p>
-        {nodes.map(n => (
-          <p key={n.id} className="text-xs t-muted">· <span className="t-text">{n.title}</span></p>
-        ))}
-      </div>
-      <ErrMsg msg={error} />
-      {preview && (
-        <div className="rounded-lg t-accent-subtle border t-accent-border p-3 space-y-1.5">
-          <p className="text-xs font-semibold t-text">{preview.title}</p>
-          <p className="text-xs t-muted">{preview.content}</p>
-          {preview.tags.length > 0 && (
-            <p className="text-[10px] t-muted">{preview.tags.map(t => `#${t}`).join(' ')}</p>
-          )}
-        </div>
-      )}
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-        {preview
-          ? <Button size="sm" onClick={() => { onSummary(preview); onClose() }}>Add summary node</Button>
-          : <Button size="sm" onClick={handleSummarize} disabled={loading}>
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
-              Summarize
-            </Button>
-        }
-      </div>
-    </div>
-  )
-}
-
 // ── Shared sub-components ────────────────────────────────────────────────────
 
 function ErrMsg({ msg }: { msg: string | null }) {
@@ -261,9 +200,9 @@ function NodePreview({ nodes }: { nodes: MentalModelNode[] | null }) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function ClaudeSync({ onImport, onClose, selectedNodes, onSummary, defaultTab = 'extract' }: Props) {
+export function ClaudeSync({ onImport, onClose, defaultTab = 'extract' }: Props) {
   const [provider, setProvider] = useState(getDefaultProvider)
-  const [tab, setTab] = useState<'extract' | 'memory' | 'summarize'>(defaultTab)
+  const [tab, setTab] = useState<'extract' | 'memory'>(defaultTab)
 
   return (
     <div className="space-y-4">
@@ -273,7 +212,7 @@ export function ClaudeSync({ onImport, onClose, selectedNodes, onSummary, defaul
           AI Import
         </DialogTitle>
         <DialogDescription className="t-muted">
-          Extract knowledge from conversations, import your AI memory, or distill selected nodes.
+          Extract knowledge from conversations or import your existing AI memory.
         </DialogDescription>
       </DialogHeader>
 
@@ -286,10 +225,6 @@ export function ClaudeSync({ onImport, onClose, selectedNodes, onSummary, defaul
           </TabsTrigger>
           <TabsTrigger value="memory" className="flex-1">
             <Brain className="h-3.5 w-3.5 mr-1.5" />Import Memory
-          </TabsTrigger>
-          <TabsTrigger value="summarize" className="flex-1" disabled={!selectedNodes?.length}>
-            <Layers className="h-3.5 w-3.5 mr-1.5" />
-            Summarize{selectedNodes?.length ? ` (${selectedNodes.length})` : ''}
           </TabsTrigger>
         </TabsList>
 
@@ -306,16 +241,6 @@ export function ClaudeSync({ onImport, onClose, selectedNodes, onSummary, defaul
             tab === 'memory' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
             <div className="overflow-hidden min-h-0">
               <MemoryTab provider={provider} onImport={onImport} onClose={onClose} />
-            </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="summarize" forceMount className="mt-3 !mt-0">
-          <div className={cn('grid transition-[grid-template-rows] duration-300 ease-in-out mt-3',
-            tab === 'summarize' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
-            <div className="overflow-hidden min-h-0">
-              {selectedNodes && onSummary && (
-                <SummarizeTab provider={provider} nodes={selectedNodes} onSummary={onSummary} onClose={onClose} />
-              )}
             </div>
           </div>
         </TabsContent>

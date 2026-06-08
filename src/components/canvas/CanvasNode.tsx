@@ -62,7 +62,7 @@ export function CanvasNode({
   return (
     <div
       className={cn(
-        'group absolute rounded-xl border flex flex-col select-none overflow-hidden',
+        'group absolute rounded-xl border flex flex-col select-none',
         'cursor-grab active:cursor-grabbing t-card',
         'transition-shadow duration-150',
         selected
@@ -79,7 +79,7 @@ export function CanvasNode({
       onMouseDown={e => onMouseDown(e, node.id)}
     >
       {/* Colored title bar */}
-      <div className={cn('relative flex flex-col px-3 py-1.5 border-b shrink-0', CATEGORY_COLORS[node.category])}>
+      <div className={cn('relative flex flex-col px-3 py-1.5 border-b shrink-0 rounded-t-xl', CATEGORY_COLORS[node.category])}>
         {/* Row 1: category icon + wrappable title (pr-5 to leave room for 3-dots) */}
         <div className="flex items-start gap-1.5 pr-5">
           <span className="shrink-0 mt-0.5">{CATEGORY_ICONS[node.category]}</span>

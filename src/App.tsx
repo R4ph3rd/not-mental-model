@@ -1,17 +1,19 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
-  Download, FolderInput, Settings, MessageSquare, Telescope, Bot,
-  Network, FolderOpen, Server, AlertTriangle,
+  Settings, MessageSquare, Telescope, Bot,
+  Network, FolderOpen, AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster, toast } from 'sonner'
 import { Sidebar } from '@/components/Sidebar'
 import { NodeCard } from '@/components/NodeCard'
 import { ClaudeSync } from '@/components/ClaudeSync'
+import { SummarizeModal } from '@/components/SummarizeModal'
 import { StatsBar } from '@/components/StatsBar'
 import { StaleReviewPanel, staleCount } from '@/components/StaleReviewPanel'
 import { CopyContextButton } from '@/components/CopyContextButton'
@@ -59,7 +61,8 @@ export default function App() {
     cleanCount: number
     onApply: (actions: ResolvedAction[]) => void
   } | null>(null)
-  const [aiTab, setAiTab]               = useState<'extract' | 'summarize'>('extract')
+  const [aiTab, setAiTab]               = useState<'extract' | 'memory'>('extract')
+  const [summarizeOpen, setSummarizeOpen] = useState(false)
   const [inspectorId, setInspectorId]   = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [chatOpen, setChatOpen]         = useState(false)
@@ -375,6 +378,43 @@ export default function App() {
     }
   }
 
+  // Delete/Backspace key handler — requires focus outside input fields
+  const undoBufferRef = useRef<MentalModelNode[]>([])
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return
+      if (selectedIds.size === 0) return
+      e.preventDefault()
+      const toDelete = nodes.filter(n => selectedIds.has(n.id))
+      undoBufferRef.current = toDelete
+      for (const n of toDelete) deleteNode(n.id)
+      setSelectedIds(new Set())
+      const count = toDelete.length
+      toast(`${count} node${count !== 1 ? 's' : ''} deleted`, {
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            for (const n of undoBufferRef.current) {
+              addNode({
+                category: n.category, title: n.title, content: n.content,
+                tags: n.tags, confidence: n.confidence, source: n.source ?? '',
+                memoryType: n.memoryType, scope: n.scope, importance: n.importance,
+                provenance: n.provenance, confirmed: n.confirmed, sensitive: n.sensitive,
+                groupIds: n.groupIds,
+              }, n.projectId, n.conversationIds.length ? n.conversationIds : undefined)
+            }
+            toast(`${count} node${count !== 1 ? 's' : ''} restored`)
+          },
+        },
+        duration: 5000,
+      })
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [selectedIds, nodes, deleteNode, addNode])
+
   const hasSelection = selectedIds.size > 0
   const VIEW_ICONS: Record<View, React.ReactNode> = {
     grid:     <LayoutGrid className="h-3.5 w-3.5" />,
@@ -463,15 +503,6 @@ export default function App() {
                 categoryFilter={categoryFilter}
                 hasSearch={!!search.trim()}
               />
-              <Button size="sm" variant="ghost" onClick={handleBackup} title="Export full backup (nodes, projects, conversations, groups)">
-                <Download className="h-3.5 w-3.5" />Backup
-              </Button>
-              <Button size="sm" variant="ghost"
-                title="Restore from a backup file"
-                onClick={() => { const el = document.getElementById('restore-file-input') as HTMLInputElement | null; el?.click() }}
-              >
-                <FolderInput className="h-3.5 w-3.5" />Restore
-              </Button>
               <input
                 id="restore-file-input"
                 type="file"
@@ -479,15 +510,9 @@ export default function App() {
                 className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) { handleRestoreFile(f); e.target.value = '' } }}
               />
-              <Button size="sm" variant="ghost" onClick={() => setMcpOpen(true)} title="Connect to agents via MCP">
-                <Server className="h-3.5 w-3.5" />Connect
-              </Button>
               <Button size="sm" variant={chatOpen ? 'secondary' : 'outline'}
                 onClick={() => { setChatOpen(v => !v); setSettingsOpen(false) }}>
                 <MessageSquare className="h-3.5 w-3.5" />Chat
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => { setAiTab('extract'); setAiOpen(true) }}>
-                <FolderInput className="h-3.5 w-3.5 t-accent" />Import / Extract
               </Button>
               <Button size="sm" variant="outline"
                 title="Infer hidden facts probably true but not yet recorded"
@@ -645,7 +670,7 @@ export default function App() {
                         return n ? <> — <span className="t-text">{n.title}</span></> : null
                       })()}
                     </span>
-                    <Button size="sm" variant="outline" onClick={() => { setAiTab('summarize'); setAiOpen(true) }}>
+                    <Button size="sm" variant="outline" onClick={() => setSummarizeOpen(true)}>
                       <Sparkles className="h-3.5 w-3.5 t-accent" />Summarize
                     </Button>
                     <Button size="sm" variant="outline"
@@ -700,7 +725,16 @@ export default function App() {
               />
             )}
 
-            {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+            {settingsOpen && (
+              <SettingsPanel
+                onClose={() => setSettingsOpen(false)}
+                onExtract={() => { setAiTab('extract'); setAiOpen(true) }}
+                onImportMemory={() => { setAiTab('memory'); setAiOpen(true) }}
+                onBackup={handleBackup}
+                onRestore={() => { const el = document.getElementById('restore-file-input') as HTMLInputElement | null; el?.click() }}
+                onConnect={() => setMcpOpen(true)}
+              />
+            )}
             {staleOpen && (
               <div className="w-80 shrink-0 border-l t-border flex flex-col overflow-hidden">
                 <StaleReviewPanel
@@ -739,9 +773,17 @@ export default function App() {
             <ClaudeSync
               onImport={handleImportWithDedup}
               onClose={() => setAiOpen(false)}
-              selectedNodes={selectedNodes}
-              onSummary={s => { addSummaryNode(s); setSelectedIds(new Set()) }}
               defaultTab={aiTab}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={summarizeOpen} onOpenChange={setSummarizeOpen}>
+          <DialogContent className="max-w-md">
+            <SummarizeModal
+              nodes={selectedNodes}
+              onSummary={s => { addSummaryNode(s); setSelectedIds(new Set()) }}
+              onClose={() => setSummarizeOpen(false)}
             />
           </DialogContent>
         </Dialog>
@@ -756,6 +798,8 @@ export default function App() {
           onClose={() => { setInferMode(null); setInferSourceNodes(null) }}
         />
       )}
+
+      <Toaster position="bottom-center" richColors />
     </TooltipProvider>
   )
 }
