@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  X, Sun, Moon, KeyRound, Check, Wifi, WifiOff, ExternalLink,
+  X, Sun, Moon, KeyRound, Check,
   Download, FolderInput, Server, Sparkles, Brain,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -46,9 +46,6 @@ interface Props {
 
 export function SettingsPanel({ onClose, onExtract, onImportMemory, onBackup, onRestore, onConnect }: Props) {
   const { colorMode, setColorMode, primaryHue, setPrimaryHue } = useTheme()
-  const hasMem0Key  = !!localStorage.getItem('mm-mem0-key')
-  const hasMem0User = !!localStorage.getItem('mm-mem0-user')
-  const mem0Active  = hasMem0Key && hasMem0User
 
   return (
     <div className="w-72 shrink-0 border-l t-border t-sidebar flex flex-col h-full">
