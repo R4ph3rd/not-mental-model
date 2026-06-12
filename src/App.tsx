@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Plus, Sparkles, Search, Brain, Trash2, LayoutGrid, GitBranch, GitCommitHorizontal,
   Settings, MessageSquare, Telescope, Bot,
-  Network, FolderOpen, AlertTriangle,
+  Network, FolderOpen, AlertTriangle, RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,7 @@ import type { ResolvedAction } from '@/components/DedupReviewModal'
 import { classifyIncoming } from '@/lib/dedup'
 import type { ClassifiedNode, PendingNode } from '@/lib/dedup'
 import { useMentalModelStore } from '@/store/mental-model-store'
+import { useSnapshotBridge } from '@/lib/snapshot-bridge'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import type { NodeCategory, MentalModelNode, GraphBackup } from '@/types/mental-model'
 
@@ -41,11 +42,15 @@ export default function App() {
   const {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
-    importNodes, addSummaryNode, bumpAccess, restoreGraph,
+    importNodes, addSummaryNode, bumpAccess, restoreGraph, mergeFromSnapshot,
     projects, addProject, updateProject, deleteProject,
     conversations, addConversation, updateConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
   } = useMentalModelStore()
+
+  // Live snapshot bridge — keeps the on-disk snapshot.json the MCP/HTTP server
+  // reads in sync with the graph, and pulls agent-written nodes back for review.
+  const bridge = useSnapshotBridge(nodes, mergeFromSnapshot)
 
   const [view, setView]                             = useState<View>('canvas')
   const [categoryFilter, setCategoryFilter]         = useState<NodeCategory | 'all'>('all')
@@ -544,6 +549,25 @@ export default function App() {
                   {nStale}
                 </button>
               )}
+              {bridge.linked && (
+                <button
+                  onClick={() => setMcpOpen(true)}
+                  title={bridge.autoSync
+                    ? `Live sync on · ${bridge.syncedCount ?? 0} nodes shared with your agents`
+                    : 'Snapshot linked — auto-sync is paused'}
+                  className={`flex items-center gap-1.5 text-[11px] rounded-lg px-2 h-8 border transition-colors ${
+                    bridge.autoSync
+                      ? 'text-green-400 border-green-500/30 hover:bg-green-500/10'
+                      : 't-muted t-border hover:t-text'
+                  }`}
+                >
+                  <span className="relative flex h-2 w-2">
+                    {bridge.autoSync && <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60 animate-ping" />}
+                    <span className={`relative inline-flex h-2 w-2 rounded-full ${bridge.autoSync ? 'bg-green-400' : 'bg-white/30'}`} />
+                  </span>
+                  {bridge.syncing ? <RefreshCw className="h-3 w-3 animate-spin" /> : 'Live'}
+                </button>
+              )}
               <Button size="icon" variant="ghost" className="h-8 w-8"
                 onClick={() => { setSettingsOpen(v => !v); setChatOpen(false) }} title="Settings">
                 <Settings className="h-4 w-4" />
@@ -751,7 +775,7 @@ export default function App() {
 
         <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
           <DialogContent className="max-w-lg">
-            <McpExportModal nodes={nodes} onClose={() => setMcpOpen(false)} />
+            <McpExportModal nodes={nodes} bridge={bridge} onClose={() => setMcpOpen(false)} />
           </DialogContent>
         </Dialog>
 

@@ -1,16 +1,31 @@
 import { useState } from 'react'
-import { X, Download, Clipboard, ClipboardCheck, Server, ExternalLink, Terminal, Bot, Zap } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  X, Download, Clipboard, ClipboardCheck, Server, ExternalLink, Terminal, Bot, Zap,
+  Radio, Link2, Link2Off, RefreshCw, ArrowDownToLine, Check, AlertTriangle,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import type { MentalModelNode } from '@/types/mental-model'
+import type { SnapshotBridge } from '@/lib/snapshot-bridge'
 import { cn } from '@/lib/utils'
 
 interface Props {
   nodes: MentalModelNode[]
+  bridge: SnapshotBridge
   onClose: () => void
 }
 
-type Tab = 'mcp' | 'http'
+type Tab = 'live' | 'mcp' | 'http'
+
+function relativeTime(ts: number): string {
+  const s = Math.floor((Date.now() - ts) / 1000)
+  if (s < 5)  return 'just now'
+  if (s < 60) return `${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ago`
+  return `${Math.floor(m / 60)}h ago`
+}
 
 // Config file paths per MCP client
 const MCP_CLIENTS = [
@@ -32,9 +47,17 @@ function useClipboard(ms = 2000) {
   return { copied, copy }
 }
 
-export function McpExportModal({ nodes, onClose }: Props) {
-  const [tab, setTab]                             = useState<Tab>('mcp')
+export function McpExportModal({ nodes, bridge, onClose }: Props) {
+  const [tab, setTab]                             = useState<Tab>(bridge.supported ? 'live' : 'mcp')
   const [clientIdx, setClientIdx]                 = useState(0)
+
+  async function handlePull() {
+    const n = await bridge.pull()
+    if (n > 0) toast(`Pulled ${n} agent ${n === 1 ? 'memory' : 'memories'}`, {
+      description: 'Added as unconfirmed — review them in your graph.',
+    })
+    else toast('No new agent memories', { description: 'The snapshot has nothing the graph is missing.' })
+  }
   const { copied: configCopied, copy: copyConfig } = useClipboard()
   const { copied: pythonCopied, copy: copyPython } = useClipboard()
   const snapshotActive = nodes.filter(n => n.active !== false && !n.sensitive)
@@ -97,9 +120,115 @@ fns = requests.get(f"{BASE}/openai-functions").json()`
 
       {/* Tab switcher */}
       <div className="flex gap-1 rounded-lg border t-border p-0.5 bg-white/[0.03]">
-        <TabBtn active={tab === 'mcp'}  onClick={() => setTab('mcp')}  icon={<Zap className="h-3 w-3" />} label="MCP (any agent)" />
-        <TabBtn active={tab === 'http'} onClick={() => setTab('http')} icon={<Bot className="h-3 w-3" />} label="HTTP (GPT / API)" />
+        <TabBtn active={tab === 'live'} onClick={() => setTab('live')} icon={<Radio className="h-3 w-3" />} label="Live sync" />
+        <TabBtn active={tab === 'mcp'}  onClick={() => setTab('mcp')}  icon={<Zap className="h-3 w-3" />} label="MCP" />
+        <TabBtn active={tab === 'http'} onClick={() => setTab('http')} icon={<Bot className="h-3 w-3" />} label="HTTP (GPT)" />
       </div>
+
+      {/* ── Live sync tab ─────────────────────────────────────────────────── */}
+      {tab === 'live' && (
+        <div className="space-y-4">
+          <p className="text-[11px] t-muted leading-relaxed">
+            Link the <code className="bg-white/8 px-1 rounded">snapshot.json</code> your MCP/HTTP server reads, once.
+            The app then keeps it fresh automatically and pulls agent-written memories back for review —
+            no re-exporting, no backend. Only <span className="t-text">active, non-sensitive</span> nodes are written.
+          </p>
+
+          {!bridge.supported ? (
+            <div className="flex items-start gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/8 px-3 py-2.5 text-[11px] text-yellow-300/90">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                Live sync needs the File System Access API — available in Chrome, Edge, Brave, Arc and Opera.
+                In this browser, use the <button className="underline" onClick={() => setTab('mcp')}>MCP</button> or{' '}
+                <button className="underline" onClick={() => setTab('http')}>HTTP</button> tab to download a snapshot manually.
+              </span>
+            </div>
+          ) : !bridge.linked ? (
+            <div className="rounded-lg border t-border bg-white/[0.03] p-4 space-y-3 text-center">
+              <Radio className="h-7 w-7 mx-auto t-accent opacity-80" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium t-text">Link your snapshot file</p>
+                <p className="text-[11px] t-muted leading-relaxed">
+                  Choose (or create) the <code className="bg-white/8 px-1 rounded">snapshot.json</code> you point the server at.
+                  We'll seed it with your current graph right away.
+                </p>
+              </div>
+              <Button size="sm" onClick={bridge.link} className="w-full">
+                <Link2 className="h-3.5 w-3.5" />Link snapshot file
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Status card */}
+              <div className="rounded-lg border t-border bg-white/[0.03] px-3 py-2.5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    {bridge.autoSync && <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60 animate-ping" />}
+                    <span className={cn('relative inline-flex h-2.5 w-2.5 rounded-full', bridge.autoSync ? 'bg-green-400' : 'bg-white/30')} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium t-text truncate">{bridge.fileName}</p>
+                    <p className="text-[10px] t-muted">
+                      {bridge.syncing
+                        ? 'Writing…'
+                        : bridge.lastSyncAt
+                          ? `${bridge.syncedCount ?? 0} nodes · synced ${relativeTime(bridge.lastSyncAt)}`
+                          : 'Linked — not yet synced'}
+                    </p>
+                  </div>
+                  <button onClick={bridge.unlink} title="Unlink file"
+                    className="shrink-0 h-6 w-6 flex items-center justify-center rounded border t-border t-muted hover:t-text transition-colors">
+                    <Link2Off className="h-3 w-3" />
+                  </button>
+                </div>
+
+                {/* Auto-sync toggle */}
+                <button
+                  onClick={() => bridge.setAutoSync(!bridge.autoSync)}
+                  className="w-full flex items-center justify-between rounded-md border t-border px-2.5 py-1.5 hover:bg-white/[0.04] transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-[11px] t-text">
+                    <RefreshCw className="h-3 w-3" />Auto-sync on every change
+                  </span>
+                  <span className={cn('relative h-4 w-7 rounded-full transition-colors shrink-0',
+                    bridge.autoSync ? 'bg-green-500/80' : 'bg-white/15')}>
+                    <span className={cn('absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all',
+                      bridge.autoSync ? 'left-3.5' : 'left-0.5')} />
+                  </span>
+                </button>
+              </div>
+
+              {bridge.error && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/8 px-3 py-2 text-[11px] text-red-300">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />{bridge.error}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={bridge.syncNow} disabled={bridge.syncing} className="flex-1">
+                  {bridge.syncing ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Sync now
+                </Button>
+                <Button size="sm" variant="outline" onClick={handlePull} className="flex-1">
+                  <ArrowDownToLine className="h-3.5 w-3.5" />Pull agent memories
+                </Button>
+              </div>
+
+              <p className="text-[10px] t-muted leading-relaxed">
+                Point your server at this same file:{' '}
+                <code className="bg-white/8 px-1 rounded">node mental-model-mcp.js {bridge.fileName}</code>.
+                Agent-written nodes arrive as <span className="text-amber-300">unconfirmed</span> for you to keep or discard.
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-[10px] t-muted">Still need the server? Grab it on the <button className="underline" onClick={() => setTab('mcp')}>MCP</button> tab.</span>
+            <Button size="sm" variant="ghost" onClick={onClose}><X className="h-3.5 w-3.5" />Close</Button>
+          </div>
+        </div>
+      )}
 
       {/* ── MCP tab ──────────────────────────────────────────────────────── */}
       {tab === 'mcp' && (
@@ -138,7 +267,7 @@ fns = requests.get(f"{BASE}/openai-functions").json()`
             <Step n={2} text="Put both in a permanent location (e.g. ~/mental-model/)." />
             <Step n={3} text={`Add the config block below to ${MCP_CLIENTS[clientIdx].file.split('/').pop()} — update the two paths.`} />
             <Step n={4} text="Restart / reload your client. Three tools appear automatically." />
-            <Step n={5} text="Re-export snapshot here whenever your graph changes." />
+            <Step n={5} text="Tip: the Live sync tab keeps this snapshot fresh automatically — no re-exporting." />
           </div>
 
           <section className="space-y-2">
