@@ -6,7 +6,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
-import { CATEGORY_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
+import { CATEGORY_COLORS, CATEGORY_DOT_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
@@ -74,10 +74,11 @@ function TimelineItem({ node, selected, onEditRequest, onToggleSelect, onUpdate 
         {timeStr(node.createdAt)}
       </span>
 
-      {/* Category dot on the track */}
+      {/* Category dot on the track — neutral disc, hue on the icon only */}
       <div className={cn(
         'h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border',
         CATEGORY_COLORS[node.category],
+        CATEGORY_DOT_COLORS[node.category],
       )}>
         {CATEGORY_ICONS[node.category]}
       </div>

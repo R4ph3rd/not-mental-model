@@ -1,0 +1,128 @@
+/* ════════════════════════════════════════════════════════════════════
+   Design tokens — Clerk-inspired neutral system with a single blue accent.
+
+   Principles:
+   • Two neutral ramps (light/dark), surfaces step by ~4% lightness.
+   • One accent (blue by default, user-tunable hue via --p-h).
+   • Color carries MEANING only: accent = interactive, blue-scale = data
+     intensity (confidence), tiny hue dots = category. Everything else gray.
+   • Elevation = layered shadows + hairline borders, never heavy borders.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Dark (default) ──────────────────────────────────────────────────── */
+:root {
+  --bg:      25 25 29;     /* #19191d  main content        */
+  --bg-2:    20 20 24;     /* #141418  sidebar / topbar    */
+  --bg-3:    16 16 19;     /* #101013  canvas / deepest    */
+  --bg-card: 33 33 38;     /* #212126  card surface        */
+  --bg-ui:   39 39 45;     /* #27272d  modals / popovers   */
+  --brd:     48 48 55;     /* #303037  hairline borders    */
+  --tx:      237 237 240;  /* #ededf0  primary text        */
+  --tx-2:    132 134 144;  /* #848690  muted text          */
+
+  /* Accent — blue. Hue is user-tunable; S/L tuned for dark surfaces. */
+  --p-h: 217;
+  --p-s: 88%;
+  --p-l: 62%;
+
+  /* Confidence ramp: data intensity as shades of the accent, not hues. */
+  --conf-high:   hsl(var(--p-h) 90% 64%);
+  --conf-medium: hsl(var(--p-h) 70% 76%);
+  --conf-low:    hsl(var(--p-h) 30% 88%);
+
+  /* Elevation — Clerk-style: tight key shadow + wide soft ambient. */
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.30), 0 0 0 1px rgb(var(--brd));
+  --elev-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 12px -2px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(var(--brd));
+  --elev-3: 0 2px 4px rgb(0 0 0 / 0.40), 0 16px 40px -8px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(var(--brd));
+  /* Borderless float shadow for elements that already carry a border. */
+  --shadow-float: 0 1px 2px rgb(0 0 0 / 0.30), 0 6px 16px -4px rgb(0 0 0 / 0.35);
+
+  /* Primary button bevel: lighter top edge reads as a physical key-cap. */
+  --btn-grad-top: hsl(var(--p-h) var(--p-s) calc(var(--p-l) + 7%));
+  --btn-grad-bot: hsl(var(--p-h) var(--p-s) calc(var(--p-l) - 4%));
+  --btn-inset:    inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+/* ── Light ───────────────────────────────────────────────────────────── */
+html.light {
+  --bg:      247 247 248;  /* #f7f7f8 */
+  --bg-2:    242 242 244;  /* #f2f2f4 */
+  --bg-3:    255 255 255;  /* #ffffff */
+  --bg-card: 255 255 255;  /* #ffffff */
+  --bg-ui:   255 255 255;  /* #ffffff */
+  --brd:     228 228 233;  /* #e4e4e9 */
+  --tx:       19  19  22;  /* #131316 */
+  --tx-2:    116 118 134;  /* #747686 */
+
+  --p-l: 54%;
+
+  --conf-high:   hsl(var(--p-h) 85% 45%);
+  --conf-medium: hsl(var(--p-h) 75% 62%);
+  --conf-low:    hsl(var(--p-h) 45% 80%);
+
+  --elev-1: 0 1px 2px rgb(16 24 40 / 0.06), 0 0 0 1px rgb(var(--brd));
+  --elev-2: 0 1px 3px rgb(16 24 40 / 0.08), 0 6px 16px -4px rgb(16 24 40 / 0.10), 0 0 0 1px rgb(var(--brd));
+  --elev-3: 0 2px 4px rgb(16 24 40 / 0.08), 0 20px 48px -12px rgb(16 24 40 / 0.18), 0 0 0 1px rgb(var(--brd));
+  --shadow-float: 0 1px 2px rgb(16 24 40 / 0.06), 0 6px 16px -4px rgb(16 24 40 / 0.12);
+}
+
+/* ── Semantic surface / text utilities (stable component API) ───────── */
+.t-bg       { background-color: rgb(var(--bg)); }
+.t-sidebar  { background-color: rgb(var(--bg-2)); }
+.t-deep     { background-color: rgb(var(--bg-3)); }
+.t-card     { background-color: rgb(var(--bg-card)); }
+.t-ui       { background-color: rgb(var(--bg-ui)); }
+.t-border   { border-color: rgb(var(--brd)); }
+.t-text     { color: rgb(var(--tx)); }
+.t-muted    { color: rgb(var(--tx-2)); }
+
+.t-accent         { color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+.t-accent-bg      { background-color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+.t-accent-subtle  { background-color: hsl(var(--p-h) var(--p-s) var(--p-l) / 0.10); }
+.t-accent-border  { border-color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+.t-accent-ring    { outline-color: hsl(var(--p-h) var(--p-s) var(--p-l)); }
+
+/* ── Elevation ───────────────────────────────────────────────────────── */
+.elev-1 { box-shadow: var(--elev-1); }
+.elev-2 { box-shadow: var(--elev-2); }
+.elev-3 { box-shadow: var(--elev-3); }
+
+/* ── Buttons (consumed by ui/button.tsx variants) ────────────────────── */
+.btn-primary {
+  background-image: linear-gradient(to bottom, var(--btn-grad-top), var(--btn-grad-bot));
+  box-shadow: var(--btn-inset), 0 1px 2px rgb(0 0 0 / 0.25);
+  color: #fff;
+}
+.btn-primary:hover  { filter: brightness(1.06); }
+.btn-primary:active { filter: brightness(0.96); }
+
+.btn-secondary {
+  background-color: rgb(var(--bg-ui));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.18), 0 0 0 1px rgb(var(--brd));
+}
+html.light .btn-secondary {
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 0 0 1px rgb(var(--brd));
+}
+.btn-secondary:hover { background-color: color-mix(in srgb, rgb(var(--bg-ui)), rgb(var(--tx)) 5%); }
+
+/* Neutral hover wash that works in both themes (replaces bg-white/8 hacks). */
+.hover-surface:hover { background-color: color-mix(in srgb, transparent, rgb(var(--tx)) 7%); }
+
+/* ── Focus ring — accent halo, Clerk-style soft spread ───────────────── */
+.focus-ring:focus-visible {
+  outline: none;
+  border-color: hsl(var(--p-h) var(--p-s) var(--p-l));
+  box-shadow: 0 0 0 3px hsl(var(--p-h) var(--p-s) var(--p-l) / 0.22);
+}
+
+/* ── Confidence — intensity of blue, not traffic lights ──────────────── */
+.conf-high   { color: var(--conf-high); }
+.conf-medium { color: var(--conf-medium); }
+.conf-low    { color: var(--conf-low); }
+
+/* ── Category — neutral header bar; hue lives only in a small dot ────── */
+.cat-bar {
+  background-color: color-mix(in srgb, rgb(var(--bg-card)), rgb(var(--tx)) 3.5%);
+  border-color: rgb(var(--brd));
+  color: rgb(var(--tx));
+}

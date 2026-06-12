@@ -33,6 +33,7 @@ import { classifyIncoming } from '@/lib/dedup'
 import type { ClassifiedNode, PendingNode } from '@/lib/dedup'
 import { useMentalModelStore } from '@/store/mental-model-store'
 import { useSnapshotBridge } from '@/lib/snapshot-bridge'
+import { downloadJson } from '@/lib/download'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
 import type { NodeCategory, MentalModelNode, GraphBackup } from '@/types/mental-model'
 
@@ -196,20 +197,12 @@ export default function App() {
   }, [])
 
   function handleBackup() {
-    const backup = {
+    const date = new Date().toISOString().slice(0, 10)
+    downloadJson(`mental-model-backup-${date}.json`, {
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
-      nodes,
-      projects,
-      conversations,
-      groups,
-    }
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a')
-    const date = new Date().toISOString().slice(0, 10)
-    a.href = URL.createObjectURL(blob)
-    a.download = `mental-model-backup-${date}.json`
-    a.click()
+      nodes, projects, conversations, groups,
+    })
   }
 
   function handleRestoreFile(file: File) {

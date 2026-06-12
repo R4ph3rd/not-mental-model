@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
-import { CATEGORY_LABELS, CATEGORY_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
+import { CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_DOT_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import type { NodeFormData } from '@/store/mental-model-store'
+import { relativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS: Record<NodeCategory, React.ReactNode> = {
@@ -33,15 +34,6 @@ interface Props {
   onConfirm: (id: string) => void
   onEditRequest: (id: string) => void
   onDistill?: (node: MentalModelNode) => void
-}
-
-function relativeTime(iso: string) {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
 }
 
 function InlineText({ value, onSave, tag = 'p', className }: {
@@ -114,8 +106,8 @@ export function NodeCard({
     <div
       onClick={handleCardClick}
       className={cn(
-        'group relative rounded-xl border flex flex-col transition-all cursor-pointer overflow-hidden',
-        selected ? 't-accent-border t-accent-subtle ring-1 t-accent-ring' : 't-border t-card hover:border-white/20',
+        'group relative rounded-xl border flex flex-col card-lift cursor-pointer overflow-hidden',
+        selected ? 't-accent-border t-accent-subtle ring-1 t-accent-ring' : 't-border t-card',
         !node.active && 'opacity-55',
         isUnconfirmedAgent ? 'border-l-2 border-l-amber-400/70 hover:border-l-amber-400/70'
           : (node.conversationIds?.length ?? 0) > 0 && 'border-l-2 border-l-violet-400/50',
@@ -134,7 +126,7 @@ export function NodeCard({
       <div className={cn('flex flex-col px-3 py-1.5 border-b', CATEGORY_COLORS[node.category])}>
         {/* Row 1: icon + title */}
         <div className="flex items-start gap-1.5 pr-5 relative">
-          <span className="shrink-0 mt-0.5">{CATEGORY_ICONS[node.category]}</span>
+          <span className={cn('shrink-0 mt-0.5', CATEGORY_DOT_COLORS[node.category])}>{CATEGORY_ICONS[node.category]}</span>
           <InlineText tag="h3" value={node.title} onSave={v => onUpdate(node.id, { title: v })}
             className="text-[11px] font-semibold leading-snug flex-1 min-w-0 break-words" />
         </div>
@@ -142,8 +134,7 @@ export function NodeCard({
         {/* Row 2: category label + memoryType + confidence + provenance + actions */}
         <div className="flex items-center gap-1.5 mt-1">
           <span className="text-[10px] font-semibold opacity-80">{CATEGORY_LABELS[node.category]}</span>
-          <span className={cn('text-[10px] opacity-70',
-            node.memoryType === 'episodic' ? 'text-violet-200' : 'text-teal-200')}>
+          <span className={cn('text-[10px] t-muted', node.memoryType === 'episodic' && 'italic')}>
             {node.memoryType}
           </span>
           <span className={cn('text-[10px]', CONFIDENCE_COLORS[node.confidence])}>●</span>

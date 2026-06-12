@@ -79,19 +79,39 @@ export const CATEGORY_LABELS: Record<NodeCategory, string> = {
   skill: 'Skill',
 }
 
+/**
+ * Card / chip surface per category. Deliberately uniform and neutral
+ * (Clerk/Linear-style): hue is reserved for the small CATEGORY_DOT_COLORS
+ * marker so the UI stays quiet while categories remain scannable.
+ */
 export const CATEGORY_COLORS: Record<NodeCategory, string> = {
-  project: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  conversation: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-  fact: 'bg-green-500/15 text-green-300 border-green-500/30',
-  preference: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
-  goal: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
-  skill: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
+  project:      'cat-bar',
+  conversation: 'cat-bar',
+  fact:         'cat-bar',
+  preference:   'cat-bar',
+  goal:         'cat-bar',
+  skill:        'cat-bar',
 }
 
+/** Tiny ink area only — icon / dot color that identifies the category. */
+export const CATEGORY_DOT_COLORS: Record<NodeCategory, string> = {
+  project:      'text-sky-400',
+  conversation: 'text-violet-400',
+  fact:         'text-teal-400',
+  preference:   'text-amber-400',
+  goal:         'text-rose-400',
+  skill:        'text-cyan-400',
+}
+
+/**
+ * Confidence = data intensity, expressed as shades of the accent blue
+ * (dense → light → near-white) instead of traffic-light hues.
+ * Classes defined in styles/tokens.css, theme-aware.
+ */
 export const CONFIDENCE_COLORS: Record<ConfidenceLevel, string> = {
-  high: 'text-green-400',
-  medium: 'text-yellow-400',
-  low: 'text-red-400',
+  high:   'conf-high',
+  medium: 'conf-medium',
+  low:    'conf-low',
 }
 
 /**

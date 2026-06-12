@@ -3,14 +3,14 @@ import { createContext, useContext, useEffect, useState } from 'react'
 type ColorMode = 'dark' | 'light'
 
 export const COLOR_PRESETS = [
-  { name: 'Purple', hue: 258 },
   { name: 'Blue',   hue: 217 },
-  { name: 'Cyan',   hue: 185 },
-  { name: 'Green',  hue: 142 },
-  { name: 'Orange', hue: 31  },
-  { name: 'Red',    hue: 4   },
-  { name: 'Pink',   hue: 320 },
+  { name: 'Indigo', hue: 240 },
+  { name: 'Purple', hue: 258 },
+  { name: 'Cyan',   hue: 195 },
+  { name: 'Teal',   hue: 175 },
 ]
+
+const DEFAULT_HUE = 217
 
 interface ThemeCtx {
   colorMode: ColorMode
@@ -25,9 +25,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [colorMode, setColorMode] = useState<ColorMode>(
     () => (localStorage.getItem('mm-color-mode') as ColorMode) ?? 'dark'
   )
-  const [primaryHue, setPrimaryHue] = useState(
-    () => Number(localStorage.getItem('mm-primary-hue') ?? 258)
-  )
+  const [primaryHue, setPrimaryHue] = useState(() => {
+    const stored = localStorage.getItem('mm-primary-hue')
+    // 258 was the pre-rebrand default (purple) — migrate it to blue once
+    if (stored === null || stored === '258') return DEFAULT_HUE
+    return Number(stored)
+  })
 
   useEffect(() => {
     document.documentElement.classList.toggle('light', colorMode === 'light')

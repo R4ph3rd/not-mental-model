@@ -249,7 +249,7 @@ export function ChatPanel({ nodes, groups, onAgentNodes, onBumpAccess, onClose }
   const primedCount = primedMemories.length
 
   return (
-    <div className="w-80 shrink-0 border-l t-border t-sidebar flex flex-col h-full">
+    <div className="w-80 shrink-0 border-l t-border t-sidebar flex flex-col h-full anim-panel-right">
 
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b t-border shrink-0">

@@ -1,0 +1,31 @@
+/* ════════════════════════════════════════════════════════════════════
+   Base — reset, typography, scrollbars, selection.
+   ════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background-color: rgb(var(--bg-3));
+  color: rgb(var(--tx));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';   /* Inter: open digits, refined a/g */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root { height: 100%; }
+
+button, [role="button"], a[href], label[for] { cursor: pointer; }
+
+::selection {
+  background: hsl(var(--p-h) var(--p-s) var(--p-l) / 0.25);
+}
+
+/* Thin, quiet scrollbars */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--brd)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--tx-2)); }

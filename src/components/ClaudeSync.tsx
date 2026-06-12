@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { PROVIDER_CONFIGS, callProvider, getDefaultProvider } from '@/lib/providers'
+import { ProviderPicker } from '@/components/shared/ProviderPicker'
+import { callProvider, getDefaultProvider } from '@/lib/providers'
 import { EXTRACT_SYSTEM, MEMORY_IMPORT_SYSTEM } from '@/lib/prompts'
 import { cn } from '@/lib/utils'
 import type { MentalModelNode } from '@/types/mental-model'
@@ -13,58 +14,6 @@ interface Props {
   onImport: (nodes: MentalModelNode[]) => void
   onClose: () => void
   defaultTab?: 'extract' | 'memory'
-}
-
-// ── Provider picker ──────────────────────────────────────────────────────────
-
-function ProviderPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-[10px] uppercase tracking-widest t-muted">AI provider</p>
-      <div className="flex flex-wrap gap-1.5">
-        {PROVIDER_CONFIGS.map(p => {
-          const hasKey = p.type === 'ollama'
-            ? true
-            : !!localStorage.getItem(p.storageKey)
-          const active = value === p.id
-          return (
-            <button
-              key={p.id}
-              onClick={() => onChange(p.id)}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs transition-colors',
-                active
-                  ? 't-accent-border t-accent-subtle t-accent font-medium'
-                  : hasKey
-                    ? 't-border t-card t-text hover:t-accent hover:t-accent-border'
-                    : 't-border t-card t-muted opacity-50',
-              )}
-            >
-              {p.label}
-              {p.free && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20 font-medium">
-                  free
-                </span>
-              )}
-              {!hasKey && p.type !== 'ollama' && (
-                <span className="text-[9px] t-muted">no key</span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-      {!PROVIDER_CONFIGS.some(p => p.type !== 'ollama' && localStorage.getItem(p.storageKey)) && (
-        <p className="text-[10px] t-muted">
-          No keys set. Add one in Settings, or use Ollama locally.
-          {' '}
-          <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer"
-            className="t-accent underline inline-flex items-center gap-0.5">
-            Get a free Groq key <ExternalLink className="h-2.5 w-2.5" />
-          </a>
-        </p>
-      )}
-    </div>
-  )
 }
 
 // ── Extract tab ──────────────────────────────────────────────────────────────

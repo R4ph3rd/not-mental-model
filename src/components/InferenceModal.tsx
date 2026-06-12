@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loader2, Bot, Telescope, Check, X, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { callProvider, getDefaultProvider } from '@/lib/providers'
-import { CATEGORY_COLORS, CATEGORY_LABELS, CONFIDENCE_COLORS } from '@/types/mental-model'
+import { CATEGORY_COLORS, CATEGORY_DOT_COLORS, CATEGORY_LABELS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import type { MentalModelNode, NodeCategory, ConfidenceLevel } from '@/types/mental-model'
 import { cn } from '@/lib/utils'
 
@@ -177,7 +177,8 @@ export function InferenceModal({ mode, nodes, onAddNodes, onClose }: Props) {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={cn('text-[10px] px-1.5 py-0.5 rounded border font-medium', CATEGORY_COLORS[c.category])}>
+                    <span className={cn('text-[10px] px-1.5 py-0.5 rounded border font-medium inline-flex items-center gap-1', CATEGORY_COLORS[c.category])}>
+                      <span className={cn('text-[7px]', CATEGORY_DOT_COLORS[c.category])}>●</span>
                       {CATEGORY_LABELS[c.category]}
                     </span>
                     <span className={cn('text-[10px]', CONFIDENCE_COLORS[c.confidence])}>● {c.confidence}</span>

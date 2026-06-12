@@ -6,6 +6,9 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { useClipboard } from '@/hooks/useClipboard'
+import { relativeTime } from '@/lib/format'
+import { downloadJson, downloadUrl } from '@/lib/download'
 import type { MentalModelNode } from '@/types/mental-model'
 import type { SnapshotBridge } from '@/lib/snapshot-bridge'
 import { cn } from '@/lib/utils'
@@ -18,15 +21,6 @@ interface Props {
 
 type Tab = 'live' | 'mcp' | 'http'
 
-function relativeTime(ts: number): string {
-  const s = Math.floor((Date.now() - ts) / 1000)
-  if (s < 5)  return 'just now'
-  if (s < 60) return `${s}s ago`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ago`
-  return `${Math.floor(m / 60)}h ago`
-}
-
 // Config file paths per MCP client
 const MCP_CLIENTS = [
   { name: 'Claude Desktop',  file: '~/Library/Application Support/Claude/claude_desktop_config.json',   note: '(macOS) or %APPDATA%\\Claude\\claude_desktop_config.json on Windows' },
@@ -36,16 +30,6 @@ const MCP_CLIENTS = [
   { name: 'Continue.dev',    file: '~/.continue/config.json',                                          note: 'add under "mcpServers" key' },
   { name: 'Claude Code',     file: '~/.claude/settings.json',                                          note: 'add under "mcpServers" key' },
 ]
-
-function useClipboard(ms = 2000) {
-  const [copied, setCopied] = useState(false)
-  function copy(text: string) {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), ms)
-  }
-  return { copied, copy }
-}
 
 export function McpExportModal({ nodes, bridge, onClose }: Props) {
   const [tab, setTab]                             = useState<Tab>(bridge.supported ? 'live' : 'mcp')
@@ -62,20 +46,8 @@ export function McpExportModal({ nodes, bridge, onClose }: Props) {
   const { copied: pythonCopied, copy: copyPython } = useClipboard()
   const snapshotActive = nodes.filter(n => n.active !== false && !n.sensitive)
 
-  function downloadSnapshot() {
-    const blob = new Blob([JSON.stringify(snapshotActive, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = 'mental-model-snapshot.json'
-    a.click()
-  }
-
-  function downloadServer() {
-    const a = document.createElement('a')
-    a.href = '/mental-model-mcp.js'
-    a.download = 'mental-model-mcp.js'
-    a.click()
-  }
+  const downloadSnapshot = () => downloadJson('mental-model-snapshot.json', snapshotActive)
+  const downloadServer   = () => downloadUrl('/mental-model-mcp.js', 'mental-model-mcp.js')
 
   const mcpConfig = JSON.stringify({
     mcpServers: {

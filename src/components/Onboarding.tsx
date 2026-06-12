@@ -174,7 +174,7 @@ export function Onboarding({ onDone, onImport }: Props) {
                     selected === p.id ? 't-accent-border t-accent-subtle' : 't-border t-card hover:t-text')}>
                   <span className={cn('text-xs font-medium', selected === p.id ? 't-accent' : 't-text')}>{p.label}</span>
                   {p.free
-                    ? <span className="text-[9px] px-1 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20">free</span>
+                    ? <span className="text-[9px] px-1 py-0.5 rounded t-accent-subtle t-accent">free</span>
                     : <span className="text-[9px] t-muted">paid</span>}
                 </button>
               ))}

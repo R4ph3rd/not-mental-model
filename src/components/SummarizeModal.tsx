@@ -2,44 +2,10 @@ import { useState } from 'react'
 import { Layers, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { PROVIDER_CONFIGS, callProvider, getDefaultProvider } from '@/lib/providers'
+import { ProviderPicker } from '@/components/shared/ProviderPicker'
+import { callProvider, getDefaultProvider } from '@/lib/providers'
 import { SUMMARIZE_SYSTEM } from '@/lib/prompts'
-import { cn } from '@/lib/utils'
 import type { MentalModelNode } from '@/types/mental-model'
-
-function ProviderPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-[10px] uppercase tracking-widest t-muted">AI provider</p>
-      <div className="flex flex-wrap gap-1.5">
-        {PROVIDER_CONFIGS.map(p => {
-          const hasKey = p.type === 'ollama' ? true : !!localStorage.getItem(p.storageKey)
-          return (
-            <button
-              key={p.id}
-              onClick={() => onChange(p.id)}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs transition-colors',
-                value === p.id
-                  ? 't-accent-border t-accent-subtle t-accent font-medium'
-                  : hasKey
-                    ? 't-border t-card t-text hover:t-accent hover:t-accent-border'
-                    : 't-border t-card t-muted opacity-50',
-              )}
-            >
-              {p.label}
-              {p.free && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20 font-medium">
-                  free
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 interface Props {
   nodes: MentalModelNode[]

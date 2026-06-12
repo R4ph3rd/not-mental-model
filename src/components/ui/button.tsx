@@ -3,22 +3,27 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
+/**
+ * Clerk-style buttons: primary carries a subtle top-light gradient + inset
+ * highlight ("key-cap" bevel), secondary is a raised neutral surface with a
+ * hairline ring. `.press` adds 120ms scale-down feedback on click.
+ */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:t-accent-ring disabled:pointer-events-none disabled:opacity-50',
+  'press inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium focus-ring disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default:     't-accent-bg text-white shadow hover:opacity-90',
-        destructive: 'bg-red-700/80 text-white shadow-sm hover:bg-red-700',
-        outline:     'border t-border t-card t-text shadow-sm hover:opacity-80',
-        secondary:   'bg-white/10 t-text shadow-sm hover:bg-white/15',
-        ghost:       't-text hover:bg-white/8',
+        default:     'btn-primary',
+        destructive: 'bg-red-600/90 text-white shadow-sm hover:bg-red-600',
+        outline:     'border t-border t-card t-text hover:border-[rgb(var(--tx-2))]',
+        secondary:   'btn-secondary t-text',
+        ghost:       't-text hover-surface',
         link:        't-accent underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2',
-        sm:      'h-8 rounded-md px-3 text-xs',
-        lg:      'h-10 rounded-md px-8',
+        sm:      'h-8 rounded-lg px-3 text-xs',
+        lg:      'h-10 rounded-lg px-8',
         icon:    'h-9 w-9',
       },
     },

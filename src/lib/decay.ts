@@ -24,9 +24,14 @@ export function decayLabel(score: number): string {
   return 'stale'
 }
 
+/**
+ * Retention rendered as blue density (strong = saturated, stale = washed out)
+ * so the bar reads as "how much ink is left", consistent with the
+ * confidence scale and the one-accent palette.
+ */
 export function decayBarColor(score: number): string {
-  if (score >= 0.75) return 'bg-green-500'
-  if (score >= 0.5) return 'bg-blue-500'
-  if (score >= 0.25) return 'bg-yellow-500'
-  return 'bg-red-500'
+  if (score >= 0.75) return 'bg-blue-500'
+  if (score >= 0.5)  return 'bg-blue-400/80'
+  if (score >= 0.25) return 'bg-blue-300/60'
+  return 'bg-blue-200/40'
 }

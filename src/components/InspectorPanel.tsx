@@ -24,39 +24,22 @@ interface Props {
   onNavigateTo?: (id: string) => void
 }
 
-// ─── Category color maps ────────────────────────────────────────────────────
-
-const CATEGORY_HEADER_BG: Record<NodeCategory, string> = {
-  project:      'rgba(59,130,246,0.12)',
-  conversation: 'rgba(168,85,247,0.12)',
-  fact:         'rgba(34,197,94,0.12)',
-  preference:   'rgba(249,115,22,0.12)',
-  goal:         'rgba(236,72,153,0.12)',
-  skill:        'rgba(6,182,212,0.12)',
-}
-
-const CATEGORY_HEADER_BORDER: Record<NodeCategory, string> = {
-  project:      'rgba(59,130,246,0.25)',
-  conversation: 'rgba(168,85,247,0.25)',
-  fact:         'rgba(34,197,94,0.25)',
-  preference:   'rgba(249,115,22,0.25)',
-  goal:         'rgba(236,72,153,0.25)',
-  skill:        'rgba(6,182,212,0.25)',
-}
+// ─── Option lists ────────────────────────────────────────────────────────────
 
 const CATEGORY_OPTIONS = (
   Object.entries(CATEGORY_LABELS) as [NodeCategory, string][]
 ).map(([value, label]) => ({ value, label }))
 
 const MEMORY_TYPE_OPTIONS: { value: MemoryType; label: string; activeClassName: string }[] = [
-  { value: 'semantic', label: 'Semantic', activeClassName: 'border-teal-500/40 text-teal-300' },
-  { value: 'episodic', label: 'Episodic', activeClassName: 'border-violet-500/40 text-violet-300' },
+  { value: 'semantic', label: 'Semantic', activeClassName: 't-accent-border t-accent' },
+  { value: 'episodic', label: 'Episodic', activeClassName: 't-accent-border t-accent italic' },
 ]
 
+// Confidence = blue density, matching CONFIDENCE_COLORS in types/mental-model
 const CONFIDENCE_OPTIONS: { value: ConfidenceLevel; label: string; activeClassName: string; dot: string }[] = [
-  { value: 'high',   label: 'High',   activeClassName: 'border-green-500/40 text-green-300',  dot: 'text-green-400' },
-  { value: 'medium', label: 'Medium', activeClassName: 'border-yellow-500/40 text-yellow-300', dot: 'text-yellow-400' },
-  { value: 'low',    label: 'Low',    activeClassName: 'border-red-500/40 text-red-300',       dot: 'text-red-400' },
+  { value: 'high',   label: 'High',   activeClassName: 't-accent-border conf-high',   dot: 'conf-high' },
+  { value: 'medium', label: 'Medium', activeClassName: 't-accent-border conf-medium', dot: 'conf-medium' },
+  { value: 'low',    label: 'Low',    activeClassName: 't-accent-border conf-low',    dot: 'conf-low' },
 ]
 
 const SOURCE_OPTIONS: { value: string; label: string }[] = [
@@ -165,16 +148,10 @@ export function InspectorPanel({ node, conversations, allNodes, onClose, onUpdat
   const availableConvs = conversations.filter(c => !(n.conversationIds ?? []).includes(c.id))
 
   return (
-    <div className="w-80 shrink-0 border-l t-border t-sidebar flex flex-col h-full">
+    <div className="w-80 shrink-0 border-l t-border t-sidebar flex flex-col h-full anim-panel-right">
 
-      {/* ── Category-colored header ── */}
-      <div
-        className="flex items-start gap-2 px-3 py-2.5 shrink-0 border-b"
-        style={{
-          background: CATEGORY_HEADER_BG[n.category],
-          borderBottomColor: CATEGORY_HEADER_BORDER[n.category],
-        }}
-      >
+      {/* ── Header — neutral surface, consistent with the cards ── */}
+      <div className="flex items-start gap-2 px-3 py-2.5 shrink-0 border-b cat-bar">
         <PillSelect
           value={n.category}
           options={CATEGORY_OPTIONS}

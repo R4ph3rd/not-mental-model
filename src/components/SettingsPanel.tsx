@@ -48,7 +48,7 @@ export function SettingsPanel({ onClose, onExtract, onImportMemory, onBackup, on
   const { colorMode, setColorMode, primaryHue, setPrimaryHue } = useTheme()
 
   return (
-    <div className="w-72 shrink-0 border-l t-border t-sidebar flex flex-col h-full">
+    <div className="w-72 shrink-0 border-l t-border t-sidebar flex flex-col h-full anim-panel-right">
       <div className="flex items-center justify-between px-4 py-3 border-b t-border shrink-0">
         <p className="text-sm font-semibold t-text">Settings</p>
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onClose}>
@@ -161,7 +161,7 @@ export function SettingsPanel({ onClose, onExtract, onImportMemory, onBackup, on
           <p className="text-[10px] uppercase tracking-widest t-muted flex items-center gap-1.5">
             <KeyRound className="h-3 w-3" /> LLM API keys
           </p>
-          <p className="text-[10px] text-green-400/80">Free tiers: Groq, Gemini AI Studio, Cerebras, Ollama (local)</p>
+          <p className="text-[10px] t-muted">Free tiers: Groq, Gemini AI Studio, Cerebras, Ollama (local)</p>
           <ApiKeyRow label="Groq (free)"        storageKey="mm-groq-key"     placeholder="gsk_…" />
           <ApiKeyRow label="Gemini AI Studio (free)" storageKey="mm-gemini-key" placeholder="AIza…" />
           <ApiKeyRow label="Cerebras (free)"    storageKey="mm-cerebras-key" placeholder="csk-…" />

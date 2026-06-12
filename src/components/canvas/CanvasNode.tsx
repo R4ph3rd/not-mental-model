@@ -3,7 +3,7 @@ import { Eye, EyeOff, Pin, Trash2, Lock, KeyRound, Unlock, Briefcase, MessageSqu
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { computeDecayScore, decayBarColor, decayLabel } from '@/lib/decay'
 import type { MentalModelNode, NodeCategory } from '@/types/mental-model'
-import { CATEGORY_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
+import { CATEGORY_COLORS, CATEGORY_DOT_COLORS, CONFIDENCE_COLORS } from '@/types/mental-model'
 import { CARD_W } from './layout'
 import { cn } from '@/lib/utils'
 
@@ -82,7 +82,7 @@ export function CanvasNode({
       <div className={cn('relative flex flex-col px-3 py-1.5 border-b shrink-0 rounded-t-xl', CATEGORY_COLORS[node.category])}>
         {/* Row 1: category icon + wrappable title (pr-5 to leave room for 3-dots) */}
         <div className="flex items-start gap-1.5 pr-5">
-          <span className="shrink-0 mt-0.5">{CATEGORY_ICONS[node.category]}</span>
+          <span className={cn('shrink-0 mt-0.5', CATEGORY_DOT_COLORS[node.category])}>{CATEGORY_ICONS[node.category]}</span>
           {editingTitle ? (
             <input
               autoFocus
@@ -158,8 +158,7 @@ export function CanvasNode({
 
         {/* Row 2: memory type + confidence dot + right-aligned active status icons */}
         <div className="flex items-center gap-1.5 mt-1.5">
-          <span className={cn('text-[10px] opacity-70',
-            node.memoryType === 'episodic' ? 'text-violet-200' : 'text-teal-200')}>
+          <span className={cn('text-[10px] t-muted', node.memoryType === 'episodic' && 'italic')}>
             {node.memoryType}
           </span>
           <span className={cn('text-[10px] shrink-0', CONFIDENCE_COLORS[node.confidence])}>●</span>
