@@ -670,6 +670,32 @@ export function useMentalModelStore() {
     setGroups(backup.groups);               persistGroups(backup.groups)
   }, [])
 
+  /**
+   * Merge nodes read back from the live snapshot file (written by an agent via
+   * the MCP/HTTP server). Unlike importNodes, this PRESERVES the governance
+   * review gate: agent-written nodes keep provenance='agent' / confirmed=false
+   * so they surface as "unconfirmed" for the user to keep or discard.
+   * Returns the number of genuinely new nodes added (by id).
+   */
+  const mergeFromSnapshot = useCallback((incoming: MentalModelNode[]): number => {
+    const existing = new Set(nodesRef.current.map(n => n.id))
+    const toAdd = incoming
+      .filter(n => n.id && !existing.has(n.id))
+      .map(n => migrateNode({
+        ...(n as Partial<MentalModelNode> & { conversationId?: string }),
+        provenance: n.provenance ?? 'agent',
+        confirmed:  n.confirmed ?? false,
+      }))
+    if (toAdd.length) {
+      mutateNodes(prev => {
+        const ids = new Set(prev.map(n => n.id))
+        const fresh = toAdd.filter(n => !ids.has(n.id))
+        return fresh.length ? [...fresh, ...prev] : prev
+      })
+    }
+    return toAdd.length
+  }, [mutateNodes])
+
   return {
     nodes, addNode, updateNode, deleteNode,
     toggleActive, togglePin, confirmNode, setPosition,
@@ -677,6 +703,6 @@ export function useMentalModelStore() {
     projects, addProject, updateProject, deleteProject,
     conversations, addConversation, updateConversation, deleteConversation,
     groups, addGroup, updateGroup, deleteGroup, toggleGroupActive,
-    restoreGraph,
+    restoreGraph, mergeFromSnapshot,
   }
 }
